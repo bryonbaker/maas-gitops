@@ -1,0 +1,70 @@
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  name: ocpai3-4shq4-4xlarge-worker-us-east-2c
+  namespace: openshift-machine-api
+  labels:
+    machine.openshift.io/cluster-api-cluster: ocpai3-4shq4
+spec:
+# Do not hard code this so Argo does not overwrite it when you scale manually
+#  replicas: 1
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: ocpai3-4shq4
+      machine.openshift.io/cluster-api-machineset: ocpai3-4shq4-4xlarge-worker-us-east-2c
+  template:
+    metadata:
+      labels:
+        machine.openshift.io/cluster-api-cluster: ocpai3-4shq4
+        machine.openshift.io/cluster-api-machine-role: worker
+        machine.openshift.io/cluster-api-machine-type: worker
+        machine.openshift.io/cluster-api-machineset: ocpai3-4shq4-4xlarge-worker-us-east-2c
+    spec:
+      lifecycleHooks: {}
+      metadata: {}
+      providerSpec:
+        value:
+          userDataSecret:
+            name: worker-user-data
+          placement:
+            availabilityZone: us-east-2c
+            region: us-east-2
+          credentialsSecret:
+            name: aws-cloud-credentials
+          capacityReservationId: ''
+          instanceType: m6i.4xlarge
+          metadata:
+            creationTimestamp: null
+          blockDevices:
+            - ebs:
+                encrypted: true
+                iops: 0
+                kmsKey:
+                  arn: ''
+                volumeSize: 120
+                volumeType: gp3
+          securityGroups:
+            - filters:
+                - name: 'tag:Name'
+                  values:
+                    - ocpai3-4shq4-node
+            - filters:
+                - name: 'tag:Name'
+                  values:
+                    - ocpai3-4shq4-lb
+          kind: AWSMachineProviderConfig
+          metadataServiceOptions: {}
+          tags:
+            - name: kubernetes.io/cluster/ocpai3-4shq4
+              value: owned
+          deviceIndex: 0
+          ami:
+            id: ami-0bc8dda494f111572
+          subnet:
+            filters:
+              - name: 'tag:Name'
+                values:
+                  - ocpai3-4shq4-subnet-private-us-east-2c
+          apiVersion: machine.openshift.io/v1beta1
+          iamInstanceProfile:
+            id: ocpai3-4shq4-worker-profile
