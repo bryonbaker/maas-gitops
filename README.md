@@ -48,7 +48,15 @@ The repository provides a helper script at `tools/bootstrap-cluster.sh` to autom
 
 Minimal manual flow (example):
 
-1. Inspect the cluster overlay you intend to use:
+
+1. Use the bootstrap script to automate the above where appropriate:
+
+```bash
+chmod +x tools/bootstrap-cluster.sh
+./tools/bootstrap-cluster.sh
+```
+
+2. Inspect the cluster overlay you intend to use:
 
 ```bash
 # from repo root
@@ -56,7 +64,7 @@ ls clusters/ocpai3-aws
 cat clusters/appofapps-repository-config.yaml
 ```
 
-2. Inspect platform and machine-set bases to adapt to your environment:
+3. Inspect platform and machine-set bases to adapt to your environment:
 
 ```bash
 # review machine-set and platform manifests
@@ -64,7 +72,7 @@ sed -n '1,200p' components/apps/machine-set/base/4xlarge-machine-set.yaml
 sed -n '1,200p' components/apps/platform/maas/base/kustomization.yaml
 ```
 
-3. Deploy a target base (example using kustomize):
+4. Deploy a target base (example using kustomize):
 
 ```bash
 # apply MAAS platform base
@@ -76,13 +84,6 @@ kubectl apply -k components/apps/machine-set/base
 # apply an example model app
 kubectl apply -k components/apps/model1/base
 kubectl apply -k components/apps/model2/base
-```
-
-4. (Optional) Use the bootstrap script to automate the above where appropriate:
-
-```bash
-chmod +x tools/bootstrap-cluster.sh
-./tools/bootstrap-cluster.sh
 ```
 
 Repository layout (more detail)
