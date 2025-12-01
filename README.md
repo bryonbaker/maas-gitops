@@ -36,8 +36,8 @@ Goals
 Prerequisites
 -------------
 
-- MAAS (Metal-as-a-Service) environment accessible and configured (API endpoint + credentials).
-- A Kubernetes control plane capable of registering/bootstrapping nodes from MAAS (e.g., MetalLB + bootstrapping tooling, or an existing cluster management system that integrates MAAS). This repo focuses on manifests, not the MAAS server itself.
+- MAAS (model-as-a-Service) environment accessible and configured (API endpoint + credentials).
+- A Kubernetes control plane capable of registering/bootstrapping nodes from MAAS (e.g., modelLB + bootstrapping tooling, or an existing cluster management system that integrates MAAS). This repo focuses on manifests, not the MAAS server itself.
 - `kubectl` and `kustomize` installed locally. If using ArgoCD, ArgoCD configured to point at this repo.
 - (Optional) `jq`, `yq` for quick manifest edits.
 
@@ -134,7 +134,7 @@ Troubleshooting
 
 - Nothing gets scheduled after machine-set applied: ensure kubelet/provisioning on newly provisioned nodes is healthy and node objects join the cluster.
 - RBAC or permission denied errors: inspect `components/apps/platform/maas/base/rbac.yaml` and adjust the cluster role bindings for ArgoCD or the agent applying manifests.
-- App not reachable: check Service/Ingress and any MetalLB or load-balancer implementation. For bare-metal, you need a load-balancing solution or an ingress controller that can work with your network.
+- App not reachable: check Service/Ingress and any modelLB or load-balancer implementation. For bare-model, you need a load-balancing solution or an ingress controller that can work with your network.
 
 Safety and cautions
 -------------------
