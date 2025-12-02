@@ -21,7 +21,7 @@ data:
       level: 0
       groups:
         - tier-free-users
-        - system:authenticated  # Default for all authenticated users
+    #   - system:authenticated  # Default for all authenticated users. Don't use this so you force proper configuration of groups.
 
     # Premium tier - for premium users
     - name: premium
@@ -29,7 +29,6 @@ data:
       level: 10
       groups:
         - tier-premium-users
-        - premium-group
 
     # Enterprise tier - highest level
     - name: enterprise
@@ -37,12 +36,10 @@ data:
       level: 20
       groups:
         - tier-enterprise-users
-        - enterprise-group
-        - admin-group
 
     # Example from doco: https://opendatahub-io.github.io/maas-billing/latest/configuration-and-management/tier-configuration/
     # Add this tier entry to the end of the tiers list:
-    - name: stier
+    - name: tier
       description: S tier user
       level: 99
       groups:
