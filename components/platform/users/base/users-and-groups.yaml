@@ -47,7 +47,7 @@ users: []
 apiVersion: user.openshift.io/v1
 kind: Group
 metadata:
-  name: acme-dev-users
+  name: tier-acme-dev-users
 users: [bryonbaker]
 
 ---
@@ -55,7 +55,7 @@ users: [bryonbaker]
 apiVersion: user.openshift.io/v1
 kind: Group
 metadata:
-  name: acme-prod-users
+  name: tier-acme-prod-users
 users: [bryonbaker, user2]
 
 --- 

@@ -42,11 +42,11 @@ data:
       description: Tier used for users with access to the Acme Inc series of models
       level: 50
       groups:
-      - acme-dev-users
+      - tier-acme-dev-users
 
     # This is an example of using namespacing to implement a tier for production users in a specific company.
     - name: acme-prod-tier
       description: Tier used for users with access to the Acme Inc series of models
       level: 50
       groups:
-      - acme-prod-users
+      - tier-acme-prod-users

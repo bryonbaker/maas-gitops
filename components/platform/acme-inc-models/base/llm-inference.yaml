@@ -3,7 +3,7 @@ kind: LLMInferenceService
 metadata:
   annotations:
     # This model is available to all users (free, premium, enterprise)
-    alpha.maas.opendatahub.io/tiers: '["acme-dev-tier","acme-prod-tier"]'
+    alpha.maas.opendatahub.io/tiers: '["tier-acme-dev-users","tier-acme-prod-users"]'
   name: facebook-opt-125m-simulated
   namespace: acme-inc-models
 spec:
