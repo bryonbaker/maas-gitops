@@ -75,3 +75,32 @@ subjects:
 - kind: User
   apiGroup: rbac.authorization.k8s.io
   name: user2
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ingress-config-viewer
+rules:
+- apiGroups: ["config.openshift.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ingress-config-viewer-user1
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ingress-config-viewer
+subjects:
+- kind: User
+  apiGroup: rbac.authorization.k8s.io
+  name: user1
+- kind: User
+  apiGroup: rbac.authorization.k8s.io
+  name: user2
