@@ -2,7 +2,8 @@ apiVersion: serving.kserve.io/v1alpha1
 kind: LLMInferenceService
 metadata:
   annotations:
-    alpha.maas.opendatahub.io/tiers: '[]'
+    # This model is available to all users (free, premium, enterprise)
+    alpha.maas.opendatahub.io/tiers: '["free","premium","enterprise"]'
   name: facebook-opt-125m-simulated
   namespace: acme-inc-models
 spec:
