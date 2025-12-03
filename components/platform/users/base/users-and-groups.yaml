@@ -1,3 +1,5 @@
+# Define the htpasswd-based users
+
 apiVersion: user.openshift.io/v1
 kind: User
 metadata:
@@ -16,13 +18,25 @@ groups: null
 identities:
 - local-htpasswd:user2
 
+--- 
+
+apiVersion: user.openshift.io/v1
+kind: User
+metadata:
+  name: acme-user1
+groups: null
+identities:
+- local-htpasswd:acme-user1
+
 ---
+
+# Establish the group membership for all users.
 
 apiVersion: user.openshift.io/v1
 kind: Group
 metadata:
   name: tier-free-users
-users: [bryonbaker]
+users: [bryonbaker, user1]
 
 ---
 
@@ -30,7 +44,7 @@ apiVersion: user.openshift.io/v1
 kind: Group
 metadata:
   name: tier-premium-users
-users: [user1]
+users: [user2]
 
 ---
 
@@ -43,20 +57,20 @@ users: []
 ---
 
 # Define groups for developers in Acme Inc
-
 apiVersion: user.openshift.io/v1
 kind: Group
 metadata:
   name: tier-acme-dev-users
-users: [bryonbaker]
+users: [bryonbaker, acme-user1]
 
 ---
 
+# Define groups for production users in Acme Inc.
 apiVersion: user.openshift.io/v1
 kind: Group
 metadata:
   name: tier-acme-prod-users
-users: [bryonbaker, user2]
+users: [bryonbaker]
 
 --- 
 
@@ -71,12 +85,15 @@ roleRef:
   kind: ClusterRole
   name: view
 subjects:
-- kind: User
-  apiGroup: rbac.authorization.k8s.io
+- apiGroup: rbac.authorization.k8s.io
+  kind: User  
   name: user1
-- kind: User
-  apiGroup: rbac.authorization.k8s.io
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
   name: user2
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: acme-user1
 
 ---
 
@@ -106,3 +123,6 @@ subjects:
 - kind: User
   apiGroup: rbac.authorization.k8s.io
   name: user2
+- kind: User
+  apiGroup: rbac.authorization.k8s.io
+  name: acme-user1
