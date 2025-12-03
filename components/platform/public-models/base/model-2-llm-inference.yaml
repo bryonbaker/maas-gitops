@@ -3,7 +3,7 @@ kind: LLMInferenceService
 metadata:
   annotations:
     # This model is only available to premium and enterprise users
-    alpha.maas.opendatahub.io/tiers: '["premium","enterprise"]'
+    alpha.maas.opendatahub.io/tiers: '["redhat-users-tier"]'
   name: shared-llm-model-2
   namespace: llm
 spec:

@@ -35,24 +35,8 @@ identities:
 apiVersion: user.openshift.io/v1
 kind: Group
 metadata:
-  name: tier-free-users
-users: [bryonbaker, user1]
-
----
-
-apiVersion: user.openshift.io/v1
-kind: Group
-metadata:
-  name: tier-premium-users
-users: [noyitz, user2]
-
----
-
-apiVersion: user.openshift.io/v1
-kind: Group
-metadata:
-  name: tier-enterprise-users
-users: []
+  name: tier-redhat-users
+users: [bryonbaker, noyitz]
 
 ---
 
@@ -61,7 +45,7 @@ apiVersion: user.openshift.io/v1
 kind: Group
 metadata:
   name: tier-acme-dev-users
-users: [bryonbaker, acme-user1, noyitz]
+users: [acme-user1, user2]
 
 ---
 
@@ -70,7 +54,7 @@ apiVersion: user.openshift.io/v1
 kind: Group
 metadata:
   name: tier-acme-prod-users
-users: [bryonbaker]
+users: [acme-user1, user1]
 
 --- 
 
