@@ -36,7 +36,7 @@ apiVersion: user.openshift.io/v1
 kind: Group
 metadata:
   name: tier-free-users
-users: [bryonbaker, user1]
+users: [bryonbaker, noyitz, user1]
 
 ---
 
@@ -61,7 +61,7 @@ apiVersion: user.openshift.io/v1
 kind: Group
 metadata:
   name: tier-acme-dev-users
-users: [bryonbaker, acme-user1]
+users: [bryonbaker, acme-user1, noyitz]
 
 ---
 
