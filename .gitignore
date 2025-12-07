@@ -1,2 +1,5 @@
 maas-experiments.code-workspace
 client-example/golang-client/ocp-dev.code-workspace
+.gitignore
+client-example/golang-client/PLAN.md
+client-example/golang-client/bin/ocp-lister
