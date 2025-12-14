@@ -1,6 +1,6 @@
 # MaaS Toolbox API
 
-A REST API service for managing tier-to-group mappings in the Open Data Hub Model as a Service (MaaS) project. This service provides CRUD operations for managing tiers that map Kubernetes groups to user-defined subscription tiers.
+A REST API service for simplifying configuration of Open Data Hub MaaS (ODH MaaS) via an API. The target use case for this toolbox is for Neo/private/sovereign cloud providers that are building their own Service request Portal in front of ODH MaaS and need a simplified management API. This service provides CRUD operations for managing subscription policies and tiers.
 
 ## Features
 
@@ -10,6 +10,10 @@ A REST API service for managing tier-to-group mappings in the Open Data Hub Mode
 - **Delete Tiers**: Remove tiers from the configuration
 - **Kubernetes ConfigMap Storage**: Stores tier configuration in Kubernetes ConfigMaps
 - **OpenShift/Kubernetes Native**: Designed to run on OpenShift/Kubernetes clusters
+
+## Backlog
+
+1. Policy cofiguration
 
 ## Architecture
 
@@ -153,7 +157,7 @@ swag init -g cmd/server/main.go -o docs
 
 ## Configuration
 
-The service stores tier configuration in a Kubernetes ConfigMap. The ConfigMap is automatically created in the `maas-api` namespace (configurable via `NAMESPACE` environment variable) with the name `tier-to-group-mapping` (configurable via `CONFIGMAP_NAME` environment variable).
+The service stores tier configuration in a Kubernetes ConfigMap. The ConfigMap is automatically created in the `maas-api` namespace (configurable via `NAMESPACE` environment variable for non-disruptive testing) with the name `tier-to-group-mapping` (configurable via `CONFIGMAP_NAME` environment variable).
 
 ### Environment Variables
 
@@ -162,6 +166,8 @@ The service stores tier configuration in a Kubernetes ConfigMap. The ConfigMap i
 - `PORT`: Server port (default: `8080`)
 
 ### ConfigMap Format
+
+Official documentation for Tier Configuration can be found [here](https://opendatahub-io.github.io/models-as-a-service/latest/configuration-and-management/tier-overview/).
 
 The ConfigMap stores tiers in the following format:
 
@@ -218,6 +224,7 @@ HTTP Status Codes:
 - Rate limiting
 - Enhanced logging and metrics
 - Multi-namespace support
+- Subscription policy configuration. [Documentation](https://opendatahub-io.github.io/models-as-a-service/latest/configuration-and-management/tier-configuration/)
 
 ## Development
 
@@ -277,7 +284,7 @@ A comprehensive test script is provided to test all API endpoints against a depl
 
 ```bash
 # Test against deployed cluster
-./tests/test-api.sh https://maas-toolbox-maas-dev.apps.sno.bakerapps.net
+./tests/test-api.sh https://maas-toolbox-maas-dev.apps.$BASE_DOMAIN
 ```
 
 The test script will:
@@ -292,5 +299,17 @@ The script uses tier names `acme-inc-1`, `acme-inc-2`, and `acme-inc-3` for test
 
 ## License
 
-This project is part of the Open Data Hub Model as a Service project.
+Copyright 2025 Bryon Baker
+
+Licensed under the Apache License, Version 2.0 (the "License");  
+you may not use this file except in compliance with the License.  
+You may obtain a copy of the License at  
+
+    http://www.apache.org/licenses/LICENSE-2.0  
+
+Unless required by applicable law or agreed to in writing, software  
+distributed under the License is distributed on an "AS IS" BASIS,  
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  
+See the License for the specific language governing permissions and  
+limitations under the License.  
 

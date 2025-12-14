@@ -15,9 +15,9 @@
 package api
 
 import (
+	"maas-toolbox/docs"
+	"maas-toolbox/internal/service"
 	"os"
-	"tier-to-group-admin/docs"
-	"tier-to-group-admin/internal/service"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"

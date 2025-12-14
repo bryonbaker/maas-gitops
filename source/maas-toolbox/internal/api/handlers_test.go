@@ -17,12 +17,12 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"maas-toolbox/internal/models"
+	"maas-toolbox/internal/service"
+	"maas-toolbox/internal/storage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"tier-to-group-admin/internal/models"
-	"tier-to-group-admin/internal/service"
-	"tier-to-group-admin/internal/storage"
 
 	"github.com/gin-gonic/gin"
 	"k8s.io/client-go/kubernetes/fake"

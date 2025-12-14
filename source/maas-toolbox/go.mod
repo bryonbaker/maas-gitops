@@ -1,4 +1,4 @@
-module tier-to-group-admin
+module maas-toolbox
 
 go 1.24.0
 

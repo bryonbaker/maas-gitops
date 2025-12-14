@@ -4,26 +4,15 @@ This document provides example curl commands for testing the MaaS Toolbox API.
 
 ## Prerequisites
 
-1. Start the server:
+1. Set the base URL for your environment:
    ```bash
-   go run cmd/server/main.go
-   ```
-   Or use the built binary:
-   ```bash
-   ./tier-admin
-   ```
-
-2. Set the base URL for your environment:
-   ```bash
-   # For local development
-   export BASE_URL="http://localhost:8080"
-   
    # For OpenShift deployment (get route URL first)
-   # ROUTE_URL=$(oc get route maas-toolbox -n maas-dev -o jsonpath='{.spec.host}')
+   # ROUTE_URL=$(oc get route maas-toolbox -n maas-toolbox -o jsonpath='{.spec.host}')
    # export BASE_URL="https://${ROUTE_URL}"
    
    # Or set it directly
-   # export BASE_URL="https://maas-toolbox-maas-dev.apps.sno.bakerapps.net"
+   # export BASE_DOMAIN=<clustername>.<domain>
+   # export BASE_URL="https://maas-toolbox-maas-dev.apps.$BASE_DOMAIN"
    ```
 
 ## Example Commands

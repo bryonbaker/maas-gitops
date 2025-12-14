@@ -16,9 +16,9 @@ package api
 
 import (
 	"log"
+	"maas-toolbox/internal/models"
+	"maas-toolbox/internal/service"
 	"net/http"
-	"tier-to-group-admin/internal/models"
-	"tier-to-group-admin/internal/service"
 
 	"github.com/gin-gonic/gin"
 )

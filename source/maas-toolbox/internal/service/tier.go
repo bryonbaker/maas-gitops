@@ -16,8 +16,8 @@ package service
 
 import (
 	"fmt"
-	"tier-to-group-admin/internal/models"
-	"tier-to-group-admin/internal/storage"
+	"maas-toolbox/internal/models"
+	"maas-toolbox/internal/storage"
 )
 
 // TierService provides business logic for tier management

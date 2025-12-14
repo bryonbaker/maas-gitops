@@ -18,11 +18,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"maas-toolbox/docs"
+	"maas-toolbox/internal/api"
+	"maas-toolbox/internal/service"
+	"maas-toolbox/internal/storage"
 	"os"
-	"tier-to-group-admin/docs"
-	"tier-to-group-admin/internal/api"
-	"tier-to-group-admin/internal/service"
-	"tier-to-group-admin/internal/storage"
 )
 
 // @title           Open Data Hub MaaS Toolbox API
@@ -32,7 +32,6 @@ import (
 
 // @contact.name   Bryon Baker
 // @contact.url    https://github.com/bryonbaker
-// @contact.email  bryonbakeraus@gmail.com
 
 // @license.name  Apache 2.0
 // @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
@@ -59,14 +58,13 @@ func init() {
 	docs.SwaggerInfo.Host = swaggerHost
 }
 
-// @title           Tier-to-Group Admin API
+// @title           Open Data Hub MaaS Toolbox API
 // @version         1.0
 // @description     REST API service for managing tier-to-group mappings in the Open Data Hub Model as a Service (MaaS) project.
 // @description     This API provides CRUD operations for managing tiers that map Kubernetes groups to user-defined subscription tiers.
 
-// @contact.name   API Support
-// @contact.url    https://github.com/opendatahub-io/maas-billing
-// @contact.email  support@example.com
+// @contact.name   Bryon Baker
+// @contact.url    https://github.com/bryonbaker
 
 // @license.name  Apache 2.0
 // @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
@@ -74,7 +72,7 @@ func init() {
 // @host      localhost:8080
 // @BasePath  /api/v1
 
-// @schemes   http https
+// @schemes   https
 
 func main() {
 	// Command line flags

@@ -19,8 +19,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"maas-toolbox/internal/models"
 	"strings"
-	"tier-to-group-admin/internal/models"
 
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
