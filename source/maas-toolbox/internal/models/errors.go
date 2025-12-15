@@ -26,6 +26,7 @@ var (
 	ErrGroupRequired           = errors.New("group name is required")
 	ErrGroupAlreadyExists      = errors.New("group already exists in tier")
 	ErrGroupNotFound           = errors.New("group not found in tier")
+	ErrGroupNotFoundInCluster  = errors.New("group not found in cluster")
 	ErrInvalidKubernetesName   = errors.New("invalid Kubernetes name format: must be 1-253 characters, start and end with alphanumeric, and contain only lowercase alphanumeric, hyphens, colons, dots, or underscores")
 )
 

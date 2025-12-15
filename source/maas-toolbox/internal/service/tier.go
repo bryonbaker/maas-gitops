@@ -32,11 +32,32 @@ func NewTierService(storage *storage.K8sTierStorage) *TierService {
 	}
 }
 
+// validateGroupsExist checks if all groups in the provided list exist in the cluster
+func (s *TierService) validateGroupsExist(groups []string) error {
+	for _, group := range groups {
+		exists, err := s.storage.GroupExists(group)
+		if err != nil {
+			return fmt.Errorf("failed to check if group %s exists: %w", group, err)
+		}
+		if !exists {
+			return models.ErrGroupNotFoundInCluster
+		}
+	}
+	return nil
+}
+
 // CreateTier creates a new tier
 func (s *TierService) CreateTier(tier *models.Tier) error {
 	// Validate tier
 	if err := tier.Validate(); err != nil {
 		return err
+	}
+
+	// Validate all groups exist in cluster
+	if len(tier.Groups) > 0 {
+		if err := s.validateGroupsExist(tier.Groups); err != nil {
+			return err
+		}
 	}
 
 	// Load existing config
@@ -120,6 +141,10 @@ func (s *TierService) UpdateTier(name string, updates *models.Tier) error {
 						return err
 					}
 				}
+				// Validate all groups exist in cluster
+				if err := s.validateGroupsExist(updates.Groups); err != nil {
+					return err
+				}
 				config.Tiers[i].Groups = updates.Groups
 			}
 
@@ -180,6 +205,15 @@ func (s *TierService) AddGroup(tierName, groupName string) error {
 	// Validate group name format
 	if err := models.ValidateGroupName(groupName); err != nil {
 		return err
+	}
+
+	// Validate group exists in cluster
+	exists, err := s.storage.GroupExists(groupName)
+	if err != nil {
+		return fmt.Errorf("failed to check if group exists: %w", err)
+	}
+	if !exists {
+		return models.ErrGroupNotFoundInCluster
 	}
 
 	// Load existing config

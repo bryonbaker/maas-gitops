@@ -26,4 +26,32 @@ roleRef:
   kind: Role
   name: maas-toolbox-role
   apiGroup: rbac.authorization.k8s.io
+---
+# ClusterRole for reading OpenShift Groups (cluster-scoped resource)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: maas-toolbox-group-reader
+  labels:
+    app: maas-toolbox
+rules:
+- apiGroups: ["user.openshift.io"]
+  resources: ["groups"]
+  verbs: ["get", "list"]
+---
+# ClusterRoleBinding to grant Group read access to the service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: maas-toolbox-group-reader-binding
+  labels:
+    app: maas-toolbox
+subjects:
+- kind: ServiceAccount
+  name: maas-toolbox-sa
+  namespace: maas-toolbox
+roleRef:
+  kind: ClusterRole
+  name: maas-toolbox-group-reader
+  apiGroup: rbac.authorization.k8s.io
 

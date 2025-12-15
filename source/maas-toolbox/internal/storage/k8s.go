@@ -20,13 +20,18 @@ import (
 	"fmt"
 	"log"
 	"maas-toolbox/internal/models"
+	"os"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // K8sTierStorage implements TierStorage using Kubernetes ConfigMap
@@ -150,4 +155,64 @@ func (k *K8sTierStorage) Save(config *models.TierConfig) error {
 	}
 
 	return nil
+}
+
+// getRESTConfig creates a REST config for accessing OpenShift resources
+// This uses the same logic as NewKubernetesClient to get the config
+func getRESTConfig() (*rest.Config, error) {
+	// Try in-cluster config first (when running in pod)
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		// Fall back to kubeconfig file (for local development)
+		kubeconfig := os.Getenv("KUBECONFIG")
+		if kubeconfig == "" {
+			kubeconfig = os.Getenv("HOME") + "/.kube/config"
+		}
+
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Kubernetes config: %w", err)
+		}
+	}
+	return config, nil
+}
+
+// GroupExists checks if a Group exists in the OpenShift cluster
+// Groups are cluster-scoped resources in the user.openshift.io/v1 API group
+func (k *K8sTierStorage) GroupExists(groupName string) (bool, error) {
+	ctx := context.Background()
+
+	// Get REST config
+	config, err := getRESTConfig()
+	if err != nil {
+		return false, fmt.Errorf("failed to get REST config: %w", err)
+	}
+
+	// Create dynamic client for OpenShift resources
+	dynamicClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return false, fmt.Errorf("failed to create dynamic client: %w", err)
+	}
+
+	// Define Group resource
+	groupResource := schema.GroupVersionResource{
+		Group:    "user.openshift.io",
+		Version:  "v1",
+		Resource: "groups",
+	}
+
+	// Try to get the group
+	_, err = dynamicClient.Resource(groupResource).Get(ctx, groupName, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			log.Printf("Group %s not found in cluster", groupName)
+			return false, nil
+		}
+		// For other errors (permission denied, etc.), return the error
+		log.Printf("Error checking if group %s exists: %v", groupName, err)
+		return false, fmt.Errorf("failed to check if group exists: %w", err)
+	}
+
+	log.Printf("Group %s exists in cluster", groupName)
+	return true, nil
 }

@@ -78,7 +78,7 @@ func (h *TierHandler) CreateTier(c *gin.Context) {
 		switch err {
 		case models.ErrTierAlreadyExists:
 			c.JSON(http.StatusConflict, ErrorResponse{Error: err.Error()})
-		case models.ErrTierNameRequired, models.ErrTierDescriptionRequired, models.ErrTierLevelInvalid, models.ErrInvalidKubernetesName:
+		case models.ErrTierNameRequired, models.ErrTierDescriptionRequired, models.ErrTierLevelInvalid, models.ErrInvalidKubernetesName, models.ErrGroupNotFoundInCluster:
 			c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
@@ -174,7 +174,7 @@ func (h *TierHandler) UpdateTier(c *gin.Context) {
 			c.JSON(http.StatusNotFound, ErrorResponse{Error: err.Error()})
 		case models.ErrTierNameImmutable:
 			c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
-		case models.ErrTierDescriptionRequired, models.ErrTierLevelInvalid, models.ErrInvalidKubernetesName:
+		case models.ErrTierDescriptionRequired, models.ErrTierLevelInvalid, models.ErrInvalidKubernetesName, models.ErrGroupNotFoundInCluster:
 			c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
@@ -247,7 +247,7 @@ func (h *TierHandler) AddGroup(c *gin.Context) {
 		switch err {
 		case models.ErrTierNotFound:
 			c.JSON(http.StatusNotFound, ErrorResponse{Error: err.Error()})
-		case models.ErrGroupRequired, models.ErrInvalidKubernetesName:
+		case models.ErrGroupRequired, models.ErrInvalidKubernetesName, models.ErrGroupNotFoundInCluster:
 			c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
 		case models.ErrGroupAlreadyExists:
 			c.JSON(http.StatusConflict, ErrorResponse{Error: err.Error()})
