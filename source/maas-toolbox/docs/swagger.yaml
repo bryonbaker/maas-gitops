@@ -42,18 +42,46 @@ definitions:
 host: localhost:8080
 info:
   contact:
-    email: support@example.com
-    name: API Support
-    url: https://github.com/opendatahub-io/maas-billing
+    name: Bryon Baker
+    url: https://github.com/bryonbaker
   description: |-
     REST API service for managing tier-to-group mappings in the Open Data Hub Model as a Service (MaaS) project.
     This API provides CRUD operations for managing tiers that map Kubernetes groups to user-defined subscription tiers.
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  title: Tier-to-Group Admin API
+  title: Open Data Hub MaaS Toolbox API
   version: "1.0"
 paths:
+  /groups/{group}/tiers:
+    get:
+      description: Retrieve all tiers that contain the specified Kubernetes group
+      parameters:
+      - description: Group name
+        in: path
+        name: group
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of tiers containing the group
+          schema:
+            items:
+              $ref: '#/definitions/models.Tier'
+            type: array
+        "400":
+          description: Bad request - invalid group name format
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Get tiers by group
+      tags:
+      - groups
   /tiers:
     get:
       description: Retrieve a list of all tiers in the system
@@ -272,6 +300,5 @@ paths:
       tags:
       - groups
 schemes:
-- http
 - https
 swagger: "2.0"

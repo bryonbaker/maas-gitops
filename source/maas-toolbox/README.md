@@ -59,7 +59,7 @@ oc apply -k yaml/
 
 ## API Endpoints
 
-All endpoints are under `/api/v1/tiers`
+Tier management endpoints are under `/api/v1/tiers`. Group query endpoints are under `/api/v1/groups`.
 
 ### Get the API URL
 
@@ -128,6 +128,16 @@ curl -X POST https://$ROUTE_URL/api/v1/tiers/free/groups \
 ```bash
 curl -X DELETE https://$ROUTE_URL/api/v1/tiers/free/groups/system:authenticated
 ```
+
+### Get Tiers by Group
+
+Retrieve all tiers that contain a specific Kubernetes group:
+
+```bash
+curl https://$ROUTE_URL/api/v1/groups/premium-users/tiers
+```
+
+This endpoint returns an array of all tiers that include the specified group. If no tiers contain the group, an empty array is returned.
 
 ### Health Check
 
@@ -290,6 +300,7 @@ A comprehensive test script is provided to test all API endpoints against a depl
 The test script will:
 - Test all CRUD operations (Create, Read, Update, Delete)
 - Test group management (Add/Remove groups)
+- Test getting tiers by group
 - Test error cases (duplicate tiers, invalid data, not found, etc.)
 - Test edge cases (empty groups, validation, etc.)
 - Display colored output with pass/fail status

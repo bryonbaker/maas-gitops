@@ -298,3 +298,30 @@ func (s *TierService) RemoveGroup(tierName, groupName string) error {
 
 	return nil
 }
+
+// GetTiersByGroup returns all tiers that contain the specified group
+func (s *TierService) GetTiersByGroup(groupName string) ([]models.Tier, error) {
+	// Validate group name format
+	if err := models.ValidateGroupName(groupName); err != nil {
+		return nil, err
+	}
+
+	// Load all tiers
+	config, err := s.storage.Load()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Filter tiers that contain the specified group
+	var matchingTiers []models.Tier
+	for _, tier := range config.Tiers {
+		for _, group := range tier.Groups {
+			if group == groupName {
+				matchingTiers = append(matchingTiers, tier)
+				break
+			}
+		}
+	}
+
+	return matchingTiers, nil
+}

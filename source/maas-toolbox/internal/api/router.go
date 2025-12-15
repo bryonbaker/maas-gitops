@@ -49,6 +49,7 @@ func SetupRouter(tierService *service.TierService) *gin.Engine {
 		// Group management routes
 		v1.POST("/tiers/:name/groups", handler.AddGroup)
 		v1.DELETE("/tiers/:name/groups/:group", handler.RemoveGroup)
+		v1.GET("/groups/:group/tiers", handler.GetTiersByGroup)
 	}
 
 	// Health check endpoint

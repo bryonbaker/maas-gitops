@@ -49,6 +49,7 @@ func setupTestRouter() (*gin.Engine, *TierHandler) {
 		v1.DELETE("/tiers/:name", handler.DeleteTier)
 		v1.POST("/tiers/:name/groups", handler.AddGroup)
 		v1.DELETE("/tiers/:name/groups/:group", handler.RemoveGroup)
+		v1.GET("/groups/:group/tiers", handler.GetTiersByGroup)
 	}
 	return router, handler
 }
@@ -216,5 +217,173 @@ func TestCreateTier_VerifyGroupsDefaultedInStorage(t *testing.T) {
 	}
 	if len(config.Tiers[0].Groups) != 0 {
 		t.Errorf("Groups should be empty list in storage, got length %d", len(config.Tiers[0].Groups))
+	}
+}
+
+func TestGetTiersByGroup_SingleTier(t *testing.T) {
+	router, _ := setupTestRouter()
+
+	// Create a tier with a group
+	tierJSON := `{
+		"name": "premium",
+		"description": "Premium tier",
+		"level": 3,
+		"groups": ["premium-users"]
+	}`
+
+	req, _ := http.NewRequest("POST", "/api/v1/tiers", bytes.NewBufferString(tierJSON))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Failed to create tier: expected status %d, got %d", http.StatusCreated, w.Code)
+	}
+
+	// Get tiers by group
+	req, _ = http.NewRequest("GET", "/api/v1/groups/premium-users/tiers", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var response []models.Tier
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if len(response) != 1 {
+		t.Errorf("Expected 1 tier, got %d", len(response))
+	}
+	if response[0].Name != "premium" {
+		t.Errorf("Expected tier name 'premium', got '%s'", response[0].Name)
+	}
+}
+
+func TestGetTiersByGroup_MultipleTiers(t *testing.T) {
+	router, _ := setupTestRouter()
+
+	// Create multiple tiers with the same group
+	tier1JSON := `{
+		"name": "premium",
+		"description": "Premium tier",
+		"level": 3,
+		"groups": ["premium-users", "vip-users"]
+	}`
+	tier2JSON := `{
+		"name": "enterprise",
+		"description": "Enterprise tier",
+		"level": 4,
+		"groups": ["premium-users", "enterprise-users"]
+	}`
+
+	// Create first tier
+	req, _ := http.NewRequest("POST", "/api/v1/tiers", bytes.NewBufferString(tier1JSON))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Failed to create first tier: expected status %d, got %d", http.StatusCreated, w.Code)
+	}
+
+	// Create second tier
+	req, _ = http.NewRequest("POST", "/api/v1/tiers", bytes.NewBufferString(tier2JSON))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Failed to create second tier: expected status %d, got %d", http.StatusCreated, w.Code)
+	}
+
+	// Get tiers by group
+	req, _ = http.NewRequest("GET", "/api/v1/groups/premium-users/tiers", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var response []models.Tier
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if len(response) != 2 {
+		t.Errorf("Expected 2 tiers, got %d", len(response))
+	}
+
+	// Verify both tiers are in the response
+	tierNames := make(map[string]bool)
+	for _, tier := range response {
+		tierNames[tier.Name] = true
+	}
+	if !tierNames["premium"] {
+		t.Error("Expected 'premium' tier in response")
+	}
+	if !tierNames["enterprise"] {
+		t.Error("Expected 'enterprise' tier in response")
+	}
+}
+
+func TestGetTiersByGroup_NoMatchingTiers(t *testing.T) {
+	router, _ := setupTestRouter()
+
+	// Create a tier with different groups
+	tierJSON := `{
+		"name": "free",
+		"description": "Free tier",
+		"level": 1,
+		"groups": ["system:authenticated"]
+	}`
+
+	req, _ := http.NewRequest("POST", "/api/v1/tiers", bytes.NewBufferString(tierJSON))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Failed to create tier: expected status %d, got %d", http.StatusCreated, w.Code)
+	}
+
+	// Get tiers by group that doesn't exist in any tier
+	req, _ = http.NewRequest("GET", "/api/v1/groups/nonexistent-group/tiers", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var response []models.Tier
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if len(response) != 0 {
+		t.Errorf("Expected 0 tiers, got %d", len(response))
+	}
+}
+
+func TestGetTiersByGroup_InvalidGroupName(t *testing.T) {
+	router, _ := setupTestRouter()
+
+	// Try to get tiers with invalid group name (contains uppercase)
+	req, _ := http.NewRequest("GET", "/api/v1/groups/InvalidGroup/tiers", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+
+	var response ErrorResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if response.Error == "" {
+		t.Error("Expected error message in response")
 	}
 }

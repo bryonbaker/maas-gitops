@@ -135,6 +135,7 @@ TEST_GROUPS=(
     "maas-toolbox-beta-users"
     "maas-toolbox-alpha-users"
     "maas-toolbox-test-group"
+    "maas-toolbox-shared-group"
 )
 
 # ============================================
@@ -311,9 +312,34 @@ run_test "Remove non-existent group" 404 DELETE "/tiers/acme-inc-1/groups/non-ex
 run_test "Remove group from non-existent tier" 404 DELETE "/tiers/non-existent/groups/maas-toolbox-test-group" ""
 
 # ============================================
-# TEST 7: VERIFY UPDATES
+# TEST 7: GET TIERS BY GROUP
 # ============================================
-print_header "TEST 7: Verify Updates"
+print_header "TEST 7: Get Tiers by Group"
+
+# First, ensure we have some tiers with groups for testing
+# Add groups back to tiers for this test
+run_test "Add group to acme-inc-1 for get-by-group test" 200 POST "/tiers/acme-inc-1/groups" \
+    '{"group":"maas-toolbox-shared-group"}'
+
+run_test "Add group to acme-inc-2 for get-by-group test" 200 POST "/tiers/acme-inc-2/groups" \
+    '{"group":"maas-toolbox-shared-group"}'
+
+# Get tiers by group (should return multiple tiers)
+run_test "Get tiers by group (shared-group)" 200 GET "/groups/maas-toolbox-shared-group/tiers" ""
+
+# Get tiers by group that exists in only one tier
+run_test "Get tiers by group (premium-users)" 200 GET "/groups/maas-toolbox-premium-users/tiers" ""
+
+# Get tiers by group that doesn't exist in any tier (should return empty array)
+run_test "Get tiers by non-existent group" 200 GET "/groups/non-existent-group/tiers" ""
+
+# Test invalid group name format (uppercase)
+run_test "Get tiers by invalid group name (uppercase)" 400 GET "/groups/InvalidGroup/tiers" ""
+
+# ============================================
+# TEST 8: VERIFY UPDATES
+# ============================================
+print_header "TEST 8: Verify Updates"
 
 run_test "Verify acme-inc-1 after updates" 200 GET "/tiers/acme-inc-1" ""
 
@@ -322,9 +348,9 @@ run_test "Verify acme-inc-2 after updates" 200 GET "/tiers/acme-inc-2" ""
 run_test "Verify acme-inc-3 after updates" 200 GET "/tiers/acme-inc-3" ""
 
 # ============================================
-# TEST 8: DELETE TIERS
+# TEST 9: DELETE TIERS
 # ============================================
-print_header "TEST 8: Delete Tiers"
+print_header "TEST 9: Delete Tiers"
 
 # Delete acme-inc-3 first
 run_test "Delete acme-inc-3 tier" 204 DELETE "/tiers/acme-inc-3" ""
@@ -341,16 +367,16 @@ run_test "Delete acme-inc-2 tier" 204 DELETE "/tiers/acme-inc-2" ""
 run_test "Delete acme-inc-1 tier" 204 DELETE "/tiers/acme-inc-1" ""
 
 # ============================================
-# TEST 9: VERIFY ALL DELETED
+# TEST 10: VERIFY ALL DELETED
 # ============================================
-print_header "TEST 9: Verify All Tiers Deleted"
+print_header "TEST 10: Verify All Tiers Deleted"
 
 run_test "Verify all tiers are deleted" 200 GET "/tiers" ""
 
 # ============================================
-# TEST 10: EDGE CASES
+# TEST 11: EDGE CASES
 # ============================================
-print_header "TEST 10: Edge Cases"
+print_header "TEST 11: Edge Cases"
 
 # Create tier without groups field (should default to empty list)
 run_test "Create tier without groups field" 201 POST "/tiers" \

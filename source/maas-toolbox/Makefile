@@ -4,7 +4,7 @@
 swagger:
 	@echo "Generating Swagger documentation..."
 	@go install github.com/swaggo/swag/cmd/swag@latest
-	@swag init -g cmd/server/main.go -o docs 2>&1 | grep -v "warning: failed to get package name" || true
+	@$$(go env GOPATH)/bin/swag init -g cmd/server/main.go -o docs 2>&1 | grep -v "warning: failed to get package name" || true
 	@echo "Swagger documentation generated in docs/"
 
 # Build container image

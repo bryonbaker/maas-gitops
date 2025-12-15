@@ -1,16 +1,14 @@
 {
     "schemes": [
-        "http",
         "https"
     ],
     "swagger": "2.0",
     "info": {
         "description": "REST API service for managing tier-to-group mappings in the Open Data Hub Model as a Service (MaaS) project.\nThis API provides CRUD operations for managing tiers that map Kubernetes groups to user-defined subscription tiers.",
-        "title": "Tier-to-Group Admin API",
+        "title": "Open Data Hub MaaS Toolbox API",
         "contact": {
-            "name": "API Support",
-            "url": "https://github.com/opendatahub-io/maas-billing",
-            "email": "support@example.com"
+            "name": "Bryon Baker",
+            "url": "https://github.com/bryonbaker"
         },
         "license": {
             "name": "Apache 2.0",
@@ -21,6 +19,50 @@
     "host": "localhost:8080",
     "basePath": "/api/v1",
     "paths": {
+        "/groups/{group}/tiers": {
+            "get": {
+                "description": "Retrieve all tiers that contain the specified Kubernetes group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "groups"
+                ],
+                "summary": "Get tiers by group",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group name",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of tiers containing the group",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Tier"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid group name format",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/tiers": {
             "get": {
                 "description": "Retrieve a list of all tiers in the system",

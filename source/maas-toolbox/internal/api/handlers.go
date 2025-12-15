@@ -305,3 +305,28 @@ func (h *TierHandler) RemoveGroup(c *gin.Context) {
 
 	c.JSON(http.StatusOK, tier)
 }
+
+// GetTiersByGroup handles GET /api/v1/groups/:group/tiers
+// @Summary      Get tiers by group
+// @Description  Retrieve all tiers that contain the specified Kubernetes group
+// @Tags         groups
+// @Produce      json
+// @Param        group  path      string  true  "Group name"
+// @Success      200    {array}   models.Tier  "List of tiers containing the group"
+// @Failure      400    {object}  ErrorResponse  "Bad request - invalid group name format"
+// @Failure      500    {object}  ErrorResponse  "Internal server error"
+// @Router       /groups/{group}/tiers [get]
+func (h *TierHandler) GetTiersByGroup(c *gin.Context) {
+	groupName := c.Param("group")
+	tiers, err := h.service.GetTiersByGroup(groupName)
+	if err != nil {
+		if err == models.ErrInvalidKubernetesName {
+			c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, tiers)
+}
