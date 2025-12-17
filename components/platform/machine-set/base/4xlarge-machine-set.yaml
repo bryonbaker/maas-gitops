@@ -1,24 +1,24 @@
 apiVersion: machine.openshift.io/v1beta1
 kind: MachineSet
 metadata:
-  name: ocpai3-4shq4-4xlarge-worker-us-east-2c
+  name: sno-jp2zl-4xlarge-worker-us-east-2c
   namespace: openshift-machine-api
   labels:
-    machine.openshift.io/cluster-api-cluster: ocpai3-4shq4
+    machine.openshift.io/cluster-api-cluster: sno-jp2zl
 spec:
 # Do not hard code this so Argo does not overwrite it when you scale manually
 #  replicas: 1
   selector:
     matchLabels:
-      machine.openshift.io/cluster-api-cluster: ocpai3-4shq4
-      machine.openshift.io/cluster-api-machineset: ocpai3-4shq4-4xlarge-worker-us-east-2c
+      machine.openshift.io/cluster-api-cluster: sno-jp2zl
+      machine.openshift.io/cluster-api-machineset: sno-jp2zl-4xlarge-worker-us-east-2c
   template:
     metadata:
       labels:
-        machine.openshift.io/cluster-api-cluster: ocpai3-4shq4
+        machine.openshift.io/cluster-api-cluster: sno-jp2zl
         machine.openshift.io/cluster-api-machine-role: worker
         machine.openshift.io/cluster-api-machine-type: worker
-        machine.openshift.io/cluster-api-machineset: ocpai3-4shq4-4xlarge-worker-us-east-2c
+        machine.openshift.io/cluster-api-machineset: sno-jp2zl-4xlarge-worker-us-east-2c
     spec:
       lifecycleHooks: {}
       metadata: {}
@@ -47,15 +47,15 @@ spec:
             - filters:
                 - name: 'tag:Name'
                   values:
-                    - ocpai3-4shq4-node
+                    - sno-jp2zl-node
             - filters:
                 - name: 'tag:Name'
                   values:
-                    - ocpai3-4shq4-lb
+                    - sno-jp2zl-lb
           kind: AWSMachineProviderConfig
           metadataServiceOptions: {}
           tags:
-            - name: kubernetes.io/cluster/ocpai3-4shq4
+            - name: kubernetes.io/cluster/sno-jp2zl
               value: owned
           deviceIndex: 0
           ami:
@@ -64,7 +64,7 @@ spec:
             filters:
               - name: 'tag:Name'
                 values:
-                  - ocpai3-4shq4-subnet-private-us-east-2c
+                  - sno-jp2zl-subnet-private-us-east-2c
           apiVersion: machine.openshift.io/v1beta1
           iamInstanceProfile:
-            id: ocpai3-4shq4-worker-profile
+            id: sno-jp2zl-worker-profile
