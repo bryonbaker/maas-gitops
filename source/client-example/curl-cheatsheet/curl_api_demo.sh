@@ -59,6 +59,7 @@ print_menu() {
     echo "2. Create Group"
     echo "3. Add User to Group"
     echo "4. Deploy Model (LLMInferenceService)"
+    echo "5. List LLMInferenceServices"
     echo "X. Exit"
     echo ""
     echo -e "${BLUE}========================================${NC}"
@@ -412,6 +413,9 @@ main() {
                 ;;
             4)
                 deploy_model_demo
+                ;;
+            5)
+                list_llminferenceservices_demo
                 ;;
             [Xx])
                 echo -e "${GREEN}Thanks for using the OpenShift API Curl Cheatsheet!${NC}"

@@ -1,0 +1,64 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: bryon-cluster-admin
+subjects:
+  - kind: User
+    apiGroup: rbac.authorization.k8s.io
+    name: bryonbaker
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: bartoszmajsak-cluster-admin
+subjects:
+  - kind: User
+    apiGroup: rbac.authorization.k8s.io
+    name: bartoszmajsak
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: butler54-cluster-admin
+subjects:
+  - kind: User
+    apiGroup: rbac.authorization.k8s.io
+    name: butler54
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nagarajan-ethan-cluster-admin
+subjects:
+  - kind: User
+    apiGroup: rbac.authorization.k8s.io
+    name: nagarajan-ethan
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: noyitz-cluster-admin
+subjects:
+  - kind: User
+    apiGroup: rbac.authorization.k8s.io
+    name: noyitz
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
