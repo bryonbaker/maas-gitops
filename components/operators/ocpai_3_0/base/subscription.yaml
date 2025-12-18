@@ -6,6 +6,7 @@ metadata:
 spec:
   name: rhods-operator
   channel: "fast-3.x" 
+  # installPlanApproval: Automatic
   source: redhat-operators
   sourceNamespace: openshift-marketplace
   startingCSV: rhods-operator.3.0.0
