@@ -4,6 +4,10 @@ metadata:
   name: nfd-instance
   namespace: openshift-nfd
 spec:
+  enableTaints: false
+  instance: ""
+  prunerOnDelete: false
+  topologyUpdater: false
   workerConfig:
     configData: |
       core:

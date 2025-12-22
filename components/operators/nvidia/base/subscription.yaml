@@ -4,9 +4,11 @@ metadata:
   name: gpu-operator-certified
   namespace: nvidia-gpu-operator
 spec:
-  channel: stable
-  installPlanApproval: Automatic
+  # There is a bug in the latest NVIDIA driver that requires this version pinning. 
+  # This should be automatic once the issue is resolved.
+  channel: v25.10
+  installPlanApproval: Manual
   name: gpu-operator-certified
   source: certified-operators
   sourceNamespace: openshift-marketplace
-  startingCSV: gpu-operator-certified.v25.3.4
+  startingCSV: gpu-operator-certified.v25.10.0
