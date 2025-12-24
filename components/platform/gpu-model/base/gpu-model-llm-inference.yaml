@@ -2,7 +2,7 @@ apiVersion: serving.kserve.io/v1alpha1
 kind: LLMInferenceService
 metadata:
   annotations:
-    alpha.maas.opendatahub.io/tiers: '["acme-dev-users-tier", "acme-prod-users-tier"]'
+    alpha.maas.opendatahub.io/tiers: '[]'
   name: granite-code-deployment
   namespace: 0-gpu-model
   finalizers:
