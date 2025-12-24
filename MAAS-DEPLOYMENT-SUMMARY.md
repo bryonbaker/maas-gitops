@@ -157,6 +157,13 @@ Two types of rate limiting policies are configured at the gateway level to contr
 
 ---
 
+## Testing Tools
+
+There is a simple tool in the `maas-experiments` GitHub Repository in the `/tools` directory.
+
+- `test-inference.sh` is a model inference testing script
+
+
 ## Configuration Management
 
 ### MaaS Toolbox API
