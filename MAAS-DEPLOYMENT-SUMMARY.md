@@ -179,8 +179,8 @@ The deployment includes a REST API service (`maas-toolbox`) for simplified MaaS 
 - Create, read, update, and delete tiers
 - Manage group-to-tier associations
 - Query tiers by group
-- MaaS Tookbox base url: `https://maas-toolbox-maas-toolbox.apps.ethan-sno.sandbox3529.opentlc.com`
-- Swagger documentation at `https://maas-toolbox-maas-toolbox.apps.ethan-sno.sandbox3529.opentlc.com/swagger/index.html`
+- MaaS Tookbox base url: `https://maas-toolbox-maas-toolbox.apps.ocp.example.com`
+- Swagger documentation at `https://maas-toolbox-maas-toolbox.apps.ocp.example.com/swagger/index.html`
 
 ### Rollout Requirements
 
