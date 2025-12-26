@@ -40,14 +40,15 @@ resources:
   # Wave 50: Infrastructure
   # - machine-set-app.yaml # Commented out as part of the default installation
   
-  # Wave 55: GPU models
-  - gpu-models-app.yaml
   
   
   # ═══════════════════════════════════════════
   # APPLICATIONS (Deploy Last - Wave 80+)
   # ═══════════════════════════════════════════
   
+  # Wave 87: GPU models
+  # - gpu-models-app.yaml
+
    # Wave 80: Users and RBAC
   # - users-app.yaml
  

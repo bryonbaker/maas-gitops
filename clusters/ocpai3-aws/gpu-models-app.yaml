@@ -8,8 +8,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: platform
   annotations:
-    # Wave 55: GPU models (depends on OCPAI DataScienceCluster being ready)
-    argocd.argoproj.io/sync-wave: "55"
+    # Wave 87: GPU models (depends on OCPAI DataScienceCluster being ready)
+    argocd.argoproj.io/sync-wave: "87"
 spec:
   project: default
   source:
