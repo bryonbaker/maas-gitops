@@ -49,13 +49,13 @@ resources:
   # ═══════════════════════════════════════════
   
    # Wave 80: Users and RBAC
-  - users-app.yaml
+  # - users-app.yaml
  
   # Wave 82: MAAS tier configuration
-  - maas-tier-config-app.yaml
+  # - maas-tier-config-app.yaml
   
   # Wave 85: Model deployment applications
-  - model-deployments-app.yaml
+  # - model-deployments-app.yaml
 
   # Wave 90: Application services
   # - keycloak-app.yaml   # Commented out as part of the default installation
