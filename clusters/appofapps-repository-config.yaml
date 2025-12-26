@@ -9,6 +9,6 @@ data:
   # "default" project
   project: ZGVmYXVsdA==
   type: Z2l0
-  # https://github.com/bryonbaker/maas-experiments.git
-  url: aHR0cHM6Ly9naXRodWIuY29tL2JyeW9uYmFrZXIvbWFhcy1leHBlcmltZW50cy5naXQ=
+  # https://github.com/bryonbaker/maas-gitops.git
+  url: aHR0cHM6Ly9naXRodWIuY29tL2JyeW9uYmFrZXIvbWFhcy1naXRvcHMuZ2l0
 type: Opaque

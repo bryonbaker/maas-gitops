@@ -13,7 +13,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/bryonbaker/maas-experiments'
+    repoURL: 'https://github.com/bryonbaker/maas-gitops'
     targetRevision: main
     path: components/apps/users/base
   destination:
