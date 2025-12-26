@@ -119,7 +119,8 @@ spec:
           
           # Check if nodes have NFD labels
           echo "→ Checking if nodes have NFD labels..."
-          labeled_nodes=$(kubectl get nodes -o json | jq '[.items[] | select(.metadata.labels | to_entries | any(.key | startswith("feature.node.kubernetes.io/")))] | length')
+          # Use grep instead of jq to count nodes with NFD labels
+          labeled_nodes=$(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels}{"\n"}{end}' 2>/dev/null | grep -c "feature\.node\.kubernetes\.io" || echo "0")
           if [ "$labeled_nodes" -gt 0 ]; then
             echo "  ✅ Found $labeled_nodes nodes with NFD labels"
           else

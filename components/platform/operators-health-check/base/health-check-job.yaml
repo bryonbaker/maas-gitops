@@ -68,7 +68,8 @@ spec:
             local operator_name=$2
             
             echo "→ Checking CSV for operator in namespace $namespace..."
-            local csv_count=$(kubectl get csv -n $namespace -o json | jq '[.items[] | select(.status.phase == "Succeeded")] | length')
+            # Use kubectl jsonpath instead of jq (which isn't available in ose-cli)
+            local csv_count=$(kubectl get csv -n $namespace -o jsonpath='{range .items[?(@.status.phase=="Succeeded")]}{.metadata.name}{"\n"}{end}' 2>/dev/null | wc -l)
             if [ "$csv_count" -gt 0 ]; then
               echo "  ✅ Found $csv_count succeeded CSV(s) in $namespace"
               kubectl get csv -n $namespace -o custom-columns=NAME:.metadata.name,PHASE:.status.phase --no-headers | head -5
