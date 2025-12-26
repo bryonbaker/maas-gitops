@@ -81,6 +81,27 @@ run_test() {
     fi
 }
 
+# Function to run LLM-dependent test
+run_llm_test() {
+    local test_name="$1"
+    local expected_status="$2"
+    local method="$3"
+    local endpoint="$4"
+    local data="$5"
+    
+    TOTAL=$((TOTAL + 1))
+    
+    if [ "$LLM_SERVICE_TESTS_ENABLED" = false ]; then
+        echo -e "Testing: $test_name ... ${YELLOW}SKIPPED${NC} (Missing dependency: $LLM_SERVICE_NAME)"
+        FAILED=$((FAILED + 1))
+        return 1
+    fi
+    
+    # Run the actual test using the standard run_test logic
+    TOTAL=$((TOTAL - 1))  # Decrement since run_test will increment again
+    run_test "$test_name" "$expected_status" "$method" "$endpoint" "$data"
+}
+
 # ============================================
 # CLUSTER DOMAIN VALIDATION
 # ============================================
@@ -119,6 +140,64 @@ if [ "$BASE_URL" != "http://localhost:8080" ]; then
         echo -e "  Please ensure you are logged into the correct cluster."
         exit 1
     fi
+fi
+
+# ============================================
+# PRE-CHECK: LLMInferenceService Dependencies
+# ============================================
+if [ "$BASE_URL" != "http://localhost:8080" ]; then
+    print_header "PRE-CHECK: LLMInferenceService Dependencies"
+    
+    LLM_SERVICE_TESTS_ENABLED=true
+    LLM_NAMESPACE="llm"
+    LLM_SERVICE_NAME="facebook-opt-125m-simulated"
+    
+    # Check if LLMInferenceService CRD exists
+    if ! oc get crd llminferenceservices.serving.kserve.io &> /dev/null; then
+        echo -e "${YELLOW}WARNING: LLMInferenceService CRD not found in cluster${NC}"
+        echo -e "${YELLOW}LLMInferenceService tests will be skipped${NC}"
+        LLM_SERVICE_TESTS_ENABLED=false
+    fi
+    
+    # Check if namespace exists
+    if [ "$LLM_SERVICE_TESTS_ENABLED" = true ]; then
+        if ! oc get namespace "$LLM_NAMESPACE" &> /dev/null; then
+            echo -e "${RED}FAILED: Required namespace '$LLM_NAMESPACE' not found${NC}"
+            echo -e "${RED}LLMInferenceService tests require namespace: $LLM_NAMESPACE${NC}"
+            LLM_SERVICE_TESTS_ENABLED=false
+        else
+            echo -e "${GREEN}✓ Namespace '$LLM_NAMESPACE' found${NC}"
+        fi
+    fi
+    
+    # Check if required LLMInferenceService exists
+    if [ "$LLM_SERVICE_TESTS_ENABLED" = true ]; then
+        if ! oc get llminferenceservice "$LLM_SERVICE_NAME" -n "$LLM_NAMESPACE" &> /dev/null; then
+            echo -e "${RED}FAILED: Required LLMInferenceService not found${NC}"
+            echo -e "${RED}Expected: $LLM_SERVICE_NAME in namespace $LLM_NAMESPACE${NC}"
+            echo -e "${RED}LLMInferenceService tests will be marked as FAILED${NC}"
+            echo -e ""
+            echo -e "${YELLOW}To enable these tests, ensure the following resource exists:${NC}"
+            echo -e "  Resource: llminferenceservices.kserve.io/$LLM_SERVICE_NAME"
+            echo -e "  Namespace: $LLM_NAMESPACE"
+            echo -e ""
+            LLM_SERVICE_TESTS_ENABLED=false
+        else
+            echo -e "${GREEN}✓ LLMInferenceService '$LLM_SERVICE_NAME' found in namespace '$LLM_NAMESPACE'${NC}"
+        fi
+    fi
+    
+    if [ "$LLM_SERVICE_TESTS_ENABLED" = true ]; then
+        echo -e "${GREEN}All LLMInferenceService dependencies satisfied${NC}"
+    else
+        echo -e "${YELLOW}LLMInferenceService tests will be skipped or marked as failed${NC}"
+    fi
+    echo ""
+else
+    # For localhost, skip LLM service tests
+    LLM_SERVICE_TESTS_ENABLED=false
+    LLM_NAMESPACE="llm"
+    LLM_SERVICE_NAME="facebook-opt-125m-simulated"
 fi
 
 # ============================================
@@ -415,6 +494,165 @@ run_test "Delete test tier (acme-inc-1)" 204 DELETE "/tiers/acme-inc-1" ""
 run_test "Delete test tier (acme-no-groups)" 204 DELETE "/tiers/acme-no-groups" ""
 
 # ============================================
+# TEST 12: ANNOTATE LLMInferenceService
+# ============================================
+print_header "TEST 12: Annotate LLMInferenceService with Tiers"
+
+# First create tiers for annotation tests
+run_test "Create tier for LLM annotation test (llm-test-tier-1)" 201 POST "/tiers" \
+    '{"name":"llm-test-tier-1","description":"LLM Test Tier 1","level":5,"groups":["maas-toolbox-premium-users"]}'
+
+run_test "Create tier for LLM annotation test (llm-test-tier-2)" 201 POST "/tiers" \
+    '{"name":"llm-test-tier-2","description":"LLM Test Tier 2","level":10,"groups":["maas-toolbox-enterprise-users"]}'
+
+# Annotate service with tier - SUCCESS cases
+run_llm_test "Annotate service with tier (llm-test-tier-1)" 200 POST "/llminferenceservices/annotate" \
+    "{\"namespace\":\"$LLM_NAMESPACE\",\"name\":\"$LLM_SERVICE_NAME\",\"tier\":\"llm-test-tier-1\"}"
+
+run_llm_test "Annotate service with second tier (llm-test-tier-2)" 200 POST "/llminferenceservices/annotate" \
+    "{\"namespace\":\"$LLM_NAMESPACE\",\"name\":\"$LLM_SERVICE_NAME\",\"tier\":\"llm-test-tier-2\"}"
+
+# ERROR cases
+run_llm_test "Try to annotate with non-existent tier" 404 POST "/llminferenceservices/annotate" \
+    "{\"namespace\":\"$LLM_NAMESPACE\",\"name\":\"$LLM_SERVICE_NAME\",\"tier\":\"non-existent-tier\"}"
+
+run_llm_test "Try to annotate non-existent service" 404 POST "/llminferenceservices/annotate" \
+    '{"namespace":"llm","name":"non-existent-service","tier":"llm-test-tier-1"}'
+
+run_llm_test "Try to annotate with missing namespace" 400 POST "/llminferenceservices/annotate" \
+    "{\"name\":\"$LLM_SERVICE_NAME\",\"tier\":\"llm-test-tier-1\"}"
+
+run_llm_test "Try to annotate with missing name" 400 POST "/llminferenceservices/annotate" \
+    '{"namespace":"llm","tier":"llm-test-tier-1"}'
+
+run_llm_test "Try to annotate with missing tier" 400 POST "/llminferenceservices/annotate" \
+    "{\"namespace\":\"$LLM_NAMESPACE\",\"name\":\"$LLM_SERVICE_NAME\"}"
+
+run_llm_test "Try to annotate in non-existent namespace" 404 POST "/llminferenceservices/annotate" \
+    "{\"namespace\":\"non-existent-ns\",\"name\":\"$LLM_SERVICE_NAME\",\"tier\":\"llm-test-tier-1\"}"
+
+# ============================================
+# TEST 13: GET LLMInferenceServices by Tier
+# ============================================
+print_header "TEST 13: Get LLMInferenceServices by Tier"
+
+# Should return our annotated service
+run_llm_test "Get services for tier with service (llm-test-tier-1)" 200 GET "/tiers/llm-test-tier-1/llminferenceservices" ""
+
+run_llm_test "Get services for tier with service (llm-test-tier-2)" 200 GET "/tiers/llm-test-tier-2/llminferenceservices" ""
+
+# Create tier without any services
+run_test "Create tier without services" 201 POST "/tiers" \
+    '{"name":"llm-empty-tier","description":"Empty Tier","level":1,"groups":[]}'
+
+run_llm_test "Get services for tier with no services (should return empty array)" 200 GET "/tiers/llm-empty-tier/llminferenceservices" ""
+
+# ERROR cases
+run_llm_test "Get services for non-existent tier" 404 GET "/tiers/non-existent-tier/llminferenceservices" ""
+
+# Verify response contains expected service
+if [ "$LLM_SERVICE_TESTS_ENABLED" = true ]; then
+    echo -n "Verifying service appears in tier query ... "
+    RESPONSE=$(curl -s -k "${API_BASE}/tiers/llm-test-tier-1/llminferenceservices")
+    if echo "$RESPONSE" | grep -q "$LLM_SERVICE_NAME"; then
+        echo -e "${GREEN}PASS${NC}"
+        echo -e "  ${GREEN}✓ Service '$LLM_SERVICE_NAME' found in tier query response${NC}"
+        PASSED=$((PASSED + 1))
+    else
+        echo -e "${RED}FAIL${NC}"
+        echo -e "  ${RED}✗ Service '$LLM_SERVICE_NAME' not found in tier query response${NC}"
+        echo "  Response: $RESPONSE"
+        FAILED=$((FAILED + 1))
+    fi
+    TOTAL=$((TOTAL + 1))
+fi
+
+# ============================================
+# TEST 14: GET LLMInferenceServices by Group
+# ============================================
+print_header "TEST 14: Get LLMInferenceServices by Group"
+
+# Query by groups that have tiers with our service
+run_llm_test "Get services by group (premium-users via llm-test-tier-1)" 200 GET "/groups/maas-toolbox-premium-users/llminferenceservices" ""
+
+run_llm_test "Get services by group (enterprise-users via llm-test-tier-2)" 200 GET "/groups/maas-toolbox-enterprise-users/llminferenceservices" ""
+
+# Query by group with no services
+run_llm_test "Get services by group with no services (should return empty array)" 200 GET "/groups/maas-toolbox-test-group/llminferenceservices" ""
+
+# ERROR cases
+run_llm_test "Get services with invalid group name (uppercase)" 400 GET "/groups/InvalidGroup/llminferenceservices" ""
+
+# Verify service appears in group query
+if [ "$LLM_SERVICE_TESTS_ENABLED" = true ]; then
+    echo -n "Verifying service appears in group query ... "
+    RESPONSE=$(curl -s -k "${API_BASE}/groups/maas-toolbox-premium-users/llminferenceservices")
+    if echo "$RESPONSE" | grep -q "$LLM_SERVICE_NAME"; then
+        echo -e "${GREEN}PASS${NC}"
+        echo -e "  ${GREEN}✓ Service '$LLM_SERVICE_NAME' found in group query response${NC}"
+        PASSED=$((PASSED + 1))
+    else
+        echo -e "${RED}FAIL${NC}"
+        echo -e "  ${RED}✗ Service '$LLM_SERVICE_NAME' not found in group query response${NC}"
+        echo "  Response: $RESPONSE"
+        FAILED=$((FAILED + 1))
+    fi
+    TOTAL=$((TOTAL + 1))
+fi
+
+# ============================================
+# TEST 15: REMOVE Tier from LLMInferenceService
+# ============================================
+print_header "TEST 15: Remove Tier from LLMInferenceService"
+
+# SUCCESS cases - remove tiers we added earlier
+run_llm_test "Remove tier from service (llm-test-tier-1)" 200 DELETE "/llminferenceservices/annotate" \
+    "{\"namespace\":\"$LLM_NAMESPACE\",\"name\":\"$LLM_SERVICE_NAME\",\"tier\":\"llm-test-tier-1\"}"
+
+# Verify tier was removed
+if [ "$LLM_SERVICE_TESTS_ENABLED" = true ]; then
+    echo -n "Verifying tier removed from service ... "
+    RESPONSE=$(curl -s -k "${API_BASE}/tiers/llm-test-tier-1/llminferenceservices")
+    if echo "$RESPONSE" | grep -q "$LLM_SERVICE_NAME"; then
+        echo -e "${RED}FAIL${NC}"
+        echo -e "  ${RED}✗ Tier removal failed - service still appears in tier${NC}"
+        FAILED=$((FAILED + 1))
+    else
+        echo -e "${GREEN}PASS${NC}"
+        echo -e "  ${GREEN}✓ Tier removed successfully - service no longer in tier${NC}"
+        PASSED=$((PASSED + 1))
+    fi
+    TOTAL=$((TOTAL + 1))
+fi
+
+run_llm_test "Remove second tier from service (llm-test-tier-2)" 200 DELETE "/llminferenceservices/annotate" \
+    "{\"namespace\":\"$LLM_NAMESPACE\",\"name\":\"$LLM_SERVICE_NAME\",\"tier\":\"llm-test-tier-2\"}"
+
+# ERROR cases
+run_llm_test "Try to remove non-existent tier from service" 404 DELETE "/llminferenceservices/annotate" \
+    "{\"namespace\":\"$LLM_NAMESPACE\",\"name\":\"$LLM_SERVICE_NAME\",\"tier\":\"non-existent-tier\"}"
+
+run_llm_test "Try to remove tier from non-existent service" 404 DELETE "/llminferenceservices/annotate" \
+    '{"namespace":"llm","name":"non-existent-service","tier":"llm-test-tier-1"}'
+
+run_llm_test "Try to remove tier already removed" 404 DELETE "/llminferenceservices/annotate" \
+    "{\"namespace\":\"$LLM_NAMESPACE\",\"name\":\"$LLM_SERVICE_NAME\",\"tier\":\"llm-test-tier-1\"}"
+
+run_llm_test "Try to remove with missing namespace" 400 DELETE "/llminferenceservices/annotate" \
+    "{\"name\":\"$LLM_SERVICE_NAME\",\"tier\":\"llm-test-tier-2\"}"
+
+run_llm_test "Try to remove with missing name" 400 DELETE "/llminferenceservices/annotate" \
+    '{"namespace":"llm","tier":"llm-test-tier-2"}'
+
+run_llm_test "Try to remove with missing tier" 400 DELETE "/llminferenceservices/annotate" \
+    "{\"namespace\":\"$LLM_NAMESPACE\",\"name\":\"$LLM_SERVICE_NAME\"}"
+
+# Clean up test tiers
+run_test "Delete LLM test tier 1" 204 DELETE "/tiers/llm-test-tier-1" ""
+run_test "Delete LLM test tier 2" 204 DELETE "/tiers/llm-test-tier-2" ""
+run_test "Delete empty test tier" 204 DELETE "/tiers/llm-empty-tier" ""
+
+# ============================================
 # CLEANUP: DELETE TEST GROUPS
 # ============================================
 print_header "CLEANUP: Deleting Test Groups"
@@ -449,6 +687,13 @@ print_header "TEST SUMMARY"
 echo -e "Total Tests: ${TOTAL}"
 echo -e "${GREEN}Passed: ${PASSED}${NC}"
 echo -e "${RED}Failed: ${FAILED}${NC}"
+
+if [ "$LLM_SERVICE_TESTS_ENABLED" = false ]; then
+    echo -e ""
+    echo -e "${YELLOW}⚠ LLMInferenceService Dependency Missing${NC}"
+    echo -e "${YELLOW}Required: $LLM_SERVICE_NAME in namespace $LLM_NAMESPACE${NC}"
+    echo -e "${YELLOW}LLMInferenceService tests were skipped/failed${NC}"
+fi
 
 if [ $FAILED -eq 0 ]; then
     echo -e "\n${GREEN}All tests passed!${NC}"
