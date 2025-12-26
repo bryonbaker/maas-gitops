@@ -6,8 +6,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: platform
   annotations:
-    # Ensure this deploys after any future "cluster-basics" bundles if you add them.
-    argocd.argoproj.io/sync-wave: "10"
+    # Wave 16: Leader Worker Set operator
+    argocd.argoproj.io/sync-wave: "16"
 spec:
   project: default
   source:
@@ -16,7 +16,7 @@ spec:
     path: components/operators/leader-worker-set/base
   destination:
     server: https://kubernetes.default.svc
-    namespace: leader-worker-set
+    namespace: openshift-lws-operator
   syncPolicy:
     # Auto sync - changes will automatically sync from Git
     automated:

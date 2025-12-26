@@ -6,8 +6,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: platform
   annotations:
-    # Ensure this deploys after any future "cluster-basics" bundles if you add them.
-    argocd.argoproj.io/sync-wave: "20"
+    # Wave 30: First instance after health check (wave 20)
+    argocd.argoproj.io/sync-wave: "30"
 spec:
   project: default
   source:
@@ -18,13 +18,18 @@ spec:
     server: https://kubernetes.default.svc
     namespace: openshift-nfd
   syncPolicy:
-    # Manual sync - changes require manual sync from Argo CD UI/CLI
     automated:
-      enabled: false      # Explicitly disables automated sync
-      prune: false        # Don't auto-prune deleted resources
-      selfHeal: false     # Don't auto-correct manual cluster changes
+      enabled: true       # Enable auto-sync for instances
+      prune: true         # Auto-prune deleted resources
+      selfHeal: true      # Auto-correct manual cluster changes
     syncOptions:
       - CreateNamespace=true
-      # Optional but useful in day-2:
       - ApplyOutOfSyncOnly=true
+      - SkipDryRunOnMissingResource=true  # Skip if CRD not ready yet
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m
   revisionHistoryLimit: 5

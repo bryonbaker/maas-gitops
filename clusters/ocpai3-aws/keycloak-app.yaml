@@ -8,8 +8,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: apps
   annotations:
-    # Ensure this deploys after any future "cluster-basics" bundles if you add them.
-    argocd.argoproj.io/sync-wave: "30"
+    # Wave 90: Applications deploy last (after all platform components)
+    argocd.argoproj.io/sync-wave: "90"
 spec:
   project: default
   source:

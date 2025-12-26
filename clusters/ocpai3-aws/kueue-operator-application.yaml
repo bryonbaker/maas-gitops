@@ -6,8 +6,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: platform
   annotations:
-    # Ensure this deploys after any future "cluster-basics" bundles if you add them.
-    argocd.argoproj.io/sync-wave: "20"
+    # Wave 12: Independent operators (can deploy in parallel with NFD)
+    argocd.argoproj.io/sync-wave: "12"
 spec:
   project: default
   source:

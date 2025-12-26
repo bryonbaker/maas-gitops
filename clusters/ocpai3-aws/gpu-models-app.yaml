@@ -8,8 +8,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: platform
   annotations:
-    # Ensure this deploys after any future "cluster-basics" bundles if you add them.
-    argocd.argoproj.io/sync-wave: "30"
+    # Wave 55: GPU models (depends on OCPAI DataScienceCluster being ready)
+    argocd.argoproj.io/sync-wave: "55"
 spec:
   project: default
   source:

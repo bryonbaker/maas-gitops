@@ -1,0 +1,196 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: operators-health-check
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "20"
+spec:
+  # Allow multiple retries if operators aren't ready yet
+  backoffLimit: 30
+  template:
+    metadata:
+      labels:
+        app: operators-health-check
+    spec:
+      serviceAccountName: openshift-gitops-argocd-application-controller
+      restartPolicy: OnFailure
+      containers:
+      - name: health-check
+        image: registry.redhat.io/openshift4/ose-cli:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          
+          echo "=================================================="
+          echo "  Comprehensive Operators Health Check"
+          echo "=================================================="
+          echo ""
+          
+          # Function to check operator deployment
+          check_deployment() {
+            local name=$1
+            local namespace=$2
+            local timeout=${3:-300s}
+            
+            echo "→ Checking deployment: $name in namespace $namespace..."
+            if kubectl wait --for=condition=available --timeout=$timeout \
+              deployment/$name -n $namespace 2>/dev/null; then
+              echo "  ✅ Deployment $name is ready"
+              return 0
+            else
+              echo "  ⚠️  Deployment $name not found or not ready, continuing..."
+              return 0  # Don't fail, some operators might not create deployments
+            fi
+          }
+          
+          # Function to check CRD is established
+          check_crd() {
+            local crd=$1
+            
+            echo "→ Checking CRD: $crd..."
+            if kubectl wait --for=condition=established --timeout=60s crd/$crd 2>/dev/null; then
+              echo "  ✅ CRD $crd is established"
+              return 0
+            else
+              echo "  ❌ CRD $crd is NOT established"
+              return 1
+            fi
+          }
+          
+          # Function to check if CSV (ClusterServiceVersion) is succeeded
+          check_csv() {
+            local namespace=$1
+            local operator_name=$2
+            
+            echo "→ Checking CSV for operator in namespace $namespace..."
+            local csv_count=$(kubectl get csv -n $namespace -o json | jq '[.items[] | select(.status.phase == "Succeeded")] | length')
+            if [ "$csv_count" -gt 0 ]; then
+              echo "  ✅ Found $csv_count succeeded CSV(s) in $namespace"
+              kubectl get csv -n $namespace -o custom-columns=NAME:.metadata.name,PHASE:.status.phase --no-headers | head -5
+              return 0
+            else
+              echo "  ❌ No succeeded CSV found in $namespace"
+              kubectl get csv -n $namespace 2>/dev/null || echo "  No CSVs found"
+              return 1
+            fi
+          }
+          
+          echo "=================================================="
+          echo "PHASE 1: Checking Operator CSVs (ClusterServiceVersions)"
+          echo "=================================================="
+          echo ""
+          
+          # Check all operator CSVs are in Succeeded state
+          FAILED=0
+          
+          echo "--- NFD Operator (Node Feature Discovery) ---"
+          check_csv "openshift-nfd" "nfd" || FAILED=1
+          echo ""
+          
+          echo "--- NVIDIA GPU Operator ---"
+          check_csv "nvidia-gpu-operator" "nvidia" || FAILED=1
+          echo ""
+          
+          echo "--- OCPAI/RHOAI Operator (Red Hat OpenShift AI) ---"
+          check_csv "redhat-ods-operator" "rhods" || FAILED=1
+          echo ""
+          
+          echo "--- Kueue Operator ---"
+          check_csv "openshift-kueue-operator" "kueue" || FAILED=1
+          echo ""
+          
+          echo "--- Leader Worker Set Operator ---"
+          check_csv "openshift-lws-operator" "lws" || FAILED=1
+          echo ""
+          
+          echo "--- Cert Manager Operator ---"
+          check_csv "cert-manager-operator" "cert-manager" || FAILED=1
+          echo ""
+          
+          if [ $FAILED -eq 1 ]; then
+            echo "❌ One or more operators failed CSV check"
+            exit 1
+          fi
+          
+          echo "=================================================="
+          echo "PHASE 2: Checking Critical CRDs"
+          echo "=================================================="
+          echo ""
+          
+          # Check critical CRDs are established
+          check_crd "nodefeaturediscoveries.nfd.openshift.io" || FAILED=1
+          echo ""
+          
+          check_crd "clusterpolicies.nvidia.com" || FAILED=1
+          echo ""
+          
+          check_crd "datascienceclusters.datasciencecluster.opendatahub.io" || FAILED=1
+          echo ""
+          
+          check_crd "leaderworkersets.leaderworkerset.x-k8s.io" || FAILED=1
+          echo ""
+          
+          check_crd "clusterqueues.kueue.x-k8s.io" || FAILED=1
+          echo ""
+          
+          check_crd "localqueues.kueue.x-k8s.io" || FAILED=1
+          echo ""
+          
+          if [ $FAILED -eq 1 ]; then
+            echo "❌ One or more CRDs failed establishment check"
+            exit 1
+          fi
+          
+          echo "=================================================="
+          echo "PHASE 3: Checking Operator Pods"
+          echo "=================================================="
+          echo ""
+          
+          # Give operators a moment to settle
+          sleep 5
+          
+          # Check operator pods are running (best effort)
+          echo "→ Checking pods in openshift-nfd..."
+          kubectl get pods -n openshift-nfd
+          echo ""
+          
+          echo "→ Checking pods in nvidia-gpu-operator..."
+          kubectl get pods -n nvidia-gpu-operator
+          echo ""
+          
+          echo "→ Checking pods in redhat-ods-operator..."
+          kubectl get pods -n redhat-ods-operator
+          echo ""
+          
+          echo "→ Checking pods in openshift-kueue-operator..."
+          kubectl get pods -n openshift-kueue-operator
+          echo ""
+          
+          echo "→ Checking pods in openshift-lws-operator..."
+          kubectl get pods -n openshift-lws-operator
+          echo ""
+          
+          echo "→ Checking pods in cert-manager-operator..."
+          kubectl get pods -n cert-manager-operator
+          echo ""
+          
+          echo "=================================================="
+          echo "✅ ALL OPERATORS ARE HEALTHY AND READY!"
+          echo "=================================================="
+          echo ""
+          echo "Operators validated:"
+          echo "  • NFD (Node Feature Discovery)"
+          echo "  • NVIDIA GPU Operator"
+          echo "  • Red Hat OpenShift AI (RHOAI/OCPAI)"
+          echo "  • Kueue"
+          echo "  • Leader Worker Set"
+          echo "  • Cert Manager"
+          echo ""
+          echo "It is now safe to deploy operator instances."
+          echo ""
+

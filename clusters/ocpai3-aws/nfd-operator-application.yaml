@@ -6,8 +6,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: platform
   annotations:
-    # Ensure this deploys after any future "cluster-basics" bundles if you add them.
-    argocd.argoproj.io/sync-wave: "10"
+    # Wave 12: NFD operator (needed by NVIDIA for GPU discovery)
+    argocd.argoproj.io/sync-wave: "12"
 spec:
   project: default
   source:

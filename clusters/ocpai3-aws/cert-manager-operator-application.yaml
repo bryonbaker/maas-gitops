@@ -6,7 +6,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: platform
   annotations:
-    # Ensure this deploys after any future "cluster-basics" bundles if you add them.
+    # Wave 10: Foundation operators (no dependencies)
     argocd.argoproj.io/sync-wave: "10"
 spec:
   project: default

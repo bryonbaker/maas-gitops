@@ -6,16 +6,16 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   labels:
-    app.kubernetes.io/part-of: platform
+    app.kubernetes.io/part-of: apps
   annotations:
-    # Ensure this deploys after any future "cluster-basics" bundles if you add them.
-    argocd.argoproj.io/sync-wave: "30"
+    # Wave 85: Model deployments (applications deploy last after all platform)
+    argocd.argoproj.io/sync-wave: "85"
 spec:
   project: default
   source:
     repoURL: 'https://github.com/bryonbaker/maas-experiments'
     targetRevision: main
-    path: components/platform/model-deployments/base
+    path: components/apps/model-deployments/base
   destination:
     server: https://kubernetes.default.svc
     namespace: llm

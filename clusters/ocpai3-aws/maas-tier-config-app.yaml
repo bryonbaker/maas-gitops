@@ -8,8 +8,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: platform
   annotations:
-    # Ensure this deploys after any future "cluster-basics" bundles if you add them.
-    argocd.argoproj.io/sync-wave: "30"
+    # Wave 82: MAAS tier configuration (after model deployments)
+    argocd.argoproj.io/sync-wave: "82"
 spec:
   project: default
   source:

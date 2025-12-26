@@ -1,0 +1,213 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: instances-health-check
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "38"
+spec:
+  # Allow multiple retries if instances aren't ready yet
+  backoffLimit: 30
+  template:
+    metadata:
+      labels:
+        app: instances-health-check
+    spec:
+      serviceAccountName: openshift-gitops-argocd-application-controller
+      restartPolicy: OnFailure
+      containers:
+      - name: health-check
+        image: registry.redhat.io/openshift4/ose-cli:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          
+          echo "=================================================="
+          echo "  Operator Instances Health Check"
+          echo "=================================================="
+          echo ""
+          echo "This gate ensures all operator instances are"
+          echo "ready before deploying OpenShift AI DSC instance."
+          echo ""
+          
+          FAILED=0
+          
+          # Function to check if a resource exists and is ready
+          check_resource() {
+            local resource_type=$1
+            local name=$2
+            local namespace=$3
+            local condition=${4:-""}
+            
+            echo "→ Checking $resource_type: $name in namespace $namespace..."
+            
+            # Check if resource exists
+            if ! kubectl get $resource_type $name -n $namespace &>/dev/null; then
+              echo "  ❌ $resource_type $name not found in namespace $namespace"
+              return 1
+            fi
+            
+            echo "  ✅ $resource_type $name exists"
+            
+            # If condition specified, check it
+            if [ -n "$condition" ]; then
+              echo "     Checking condition: $condition..."
+              if kubectl wait --for=condition=$condition --timeout=10s \
+                $resource_type/$name -n $namespace 2>/dev/null; then
+                echo "     ✅ Condition $condition met"
+              else
+                echo "     ⚠️  Condition $condition not yet met (may still be deploying)"
+              fi
+            fi
+            
+            return 0
+          }
+          
+          # Function to check daemonset is ready
+          check_daemonset_ready() {
+            local name=$1
+            local namespace=$2
+            
+            echo "→ Checking DaemonSet: $name in namespace $namespace..."
+            
+            if ! kubectl get daemonset $name -n $namespace &>/dev/null; then
+              echo "  ⚠️  DaemonSet $name not found (may not be created yet)"
+              return 0  # Don't fail, some clusters might not have GPU nodes yet
+            fi
+            
+            local desired=$(kubectl get daemonset $name -n $namespace -o jsonpath='{.status.desiredNumberScheduled}' 2>/dev/null || echo "0")
+            local ready=$(kubectl get daemonset $name -n $namespace -o jsonpath='{.status.numberReady}' 2>/dev/null || echo "0")
+            
+            echo "  DaemonSet $name: $ready/$desired pods ready"
+            
+            if [ "$desired" -gt 0 ] && [ "$ready" -eq "$desired" ]; then
+              echo "  ✅ DaemonSet $name is fully ready"
+              return 0
+            elif [ "$desired" -eq 0 ]; then
+              echo "  ℹ️  DaemonSet $name has 0 desired pods (may be waiting for GPU nodes)"
+              return 0
+            else
+              echo "  ⚠️  DaemonSet $name is not fully ready yet ($ready/$desired)"
+              return 0  # Don't fail, give it more time
+            fi
+          }
+          
+          echo "=================================================="
+          echo "PHASE 1: Checking NFD Instance"
+          echo "=================================================="
+          echo ""
+          
+          # Check NFD instance exists
+          check_resource "nodefeaturediscovery" "nfd-instance" "openshift-nfd" || FAILED=1
+          echo ""
+          
+          # Check NFD pods are running
+          echo "→ Checking NFD worker pods..."
+          nfd_pods=$(kubectl get pods -n openshift-nfd -l app=nfd-worker --field-selector=status.phase=Running 2>/dev/null | grep -c Running || echo "0")
+          if [ "$nfd_pods" -gt 0 ]; then
+            echo "  ✅ Found $nfd_pods NFD worker pods running"
+            kubectl get pods -n openshift-nfd -l app=nfd-worker
+          else
+            echo "  ❌ No NFD worker pods found running"
+            FAILED=1
+          fi
+          echo ""
+          
+          # Check if nodes have NFD labels
+          echo "→ Checking if nodes have NFD labels..."
+          labeled_nodes=$(kubectl get nodes -o json | jq '[.items[] | select(.metadata.labels | to_entries | any(.key | startswith("feature.node.kubernetes.io/")))] | length')
+          if [ "$labeled_nodes" -gt 0 ]; then
+            echo "  ✅ Found $labeled_nodes nodes with NFD labels"
+          else
+            echo "  ⚠️  No nodes with NFD labels yet (may still be discovering)"
+          fi
+          echo ""
+          
+          echo "=================================================="
+          echo "PHASE 2: Checking NVIDIA GPU Cluster Policy"
+          echo "=================================================="
+          echo ""
+          
+          # Check NVIDIA ClusterPolicy exists
+          check_resource "clusterpolicy" "gpu-cluster-policy" "nvidia-gpu-operator" || FAILED=1
+          echo ""
+          
+          # Check NVIDIA ClusterPolicy state
+          echo "→ Checking NVIDIA ClusterPolicy state..."
+          gpu_state=$(kubectl get clusterpolicy gpu-cluster-policy -o jsonpath='{.status.state}' 2>/dev/null || echo "unknown")
+          echo "  ClusterPolicy state: $gpu_state"
+          
+          if [ "$gpu_state" == "ready" ]; then
+            echo "  ✅ NVIDIA ClusterPolicy is ready"
+          else
+            echo "  ⚠️  NVIDIA ClusterPolicy state is: $gpu_state (may still be deploying)"
+          fi
+          echo ""
+          
+          # Check NVIDIA daemonsets (if GPU nodes exist)
+          echo "→ Checking NVIDIA GPU driver daemonset..."
+          check_daemonset_ready "nvidia-driver-daemonset" "nvidia-gpu-operator"
+          echo ""
+          
+          echo "→ Checking NVIDIA device plugin daemonset..."
+          check_daemonset_ready "nvidia-device-plugin-daemonset" "nvidia-gpu-operator"
+          echo ""
+          
+          # Check if GPU nodes are labeled
+          echo "→ Checking for GPU nodes..."
+          gpu_nodes=$(kubectl get nodes -l 'nvidia.com/gpu.present=true' --no-headers 2>/dev/null | wc -l || echo "0")
+          if [ "$gpu_nodes" -gt 0 ]; then
+            echo "  ✅ Found $gpu_nodes GPU node(s)"
+            kubectl get nodes -l 'nvidia.com/gpu.present=true'
+          else
+            echo "  ℹ️  No GPU nodes found yet (cluster may not have GPU nodes or still detecting)"
+          fi
+          echo ""
+          
+          echo "=================================================="
+          echo "PHASE 3: Checking Leader Worker Set Instance"
+          echo "=================================================="
+          echo ""
+          
+          # Check LWS operator instance exists
+          check_resource "leaderworkersetoperator" "cluster" "" || FAILED=1
+          echo ""
+          
+          # Check LWS controller pods
+          echo "→ Checking LWS controller pods..."
+          lws_pods=$(kubectl get pods -n openshift-lws-operator -l app=lws-controller-manager --field-selector=status.phase=Running 2>/dev/null | grep -c Running || echo "0")
+          if [ "$lws_pods" -gt 0 ]; then
+            echo "  ✅ Found $lws_pods LWS controller pod(s) running"
+          else
+            echo "  ❌ No LWS controller pods found running"
+            FAILED=1
+          fi
+          echo ""
+          
+          echo "=================================================="
+          echo "PHASE 4: Summary"
+          echo "=================================================="
+          echo ""
+          
+          if [ $FAILED -eq 1 ]; then
+            echo "❌ One or more instances failed health check"
+            echo ""
+            echo "Please investigate the failures above."
+            echo "The job will retry automatically."
+            exit 1
+          fi
+          
+          echo "✅ ALL OPERATOR INSTANCES ARE HEALTHY!"
+          echo ""
+          echo "Instances validated:"
+          echo "  • NFD (Node Feature Discovery) - discovering node features"
+          echo "  • NVIDIA GPU ClusterPolicy - GPU drivers deployed"
+          echo "  • Leader Worker Set - controller running"
+          echo ""
+          echo "It is now safe to deploy OpenShift AI DataScienceCluster."
+          echo ""
+

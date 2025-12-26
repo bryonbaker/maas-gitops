@@ -6,8 +6,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: platform
   annotations:
-    # Ensure this deploys after any future "cluster-basics" bundles if you add them.
-    argocd.argoproj.io/sync-wave: "30"
+    # Wave 50: Machine sets (infrastructure after instances are ready)
+    argocd.argoproj.io/sync-wave: "50"
 spec:
   project: default
   source:

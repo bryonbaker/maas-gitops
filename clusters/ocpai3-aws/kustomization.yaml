@@ -2,16 +2,60 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - acme-inc-models-app.yaml
+  # Wave 3: Cluster configuration (monitoring, cluster basics)
+  - cluster-config-app.yaml
+  
+  # Wave 10: Foundation operators
+  - cert-manager-operator-application.yaml
+  
+  # Wave 12: Independent operators
+  - kueue-operator-application.yaml
+  - nfd-operator-application.yaml
+  
+  # Wave 14: NVIDIA operator (depends on NFD)
+  - nvidia-operator-application.yaml
+  
+  # Wave 16: Additional operators
+  - lws-operator-application.yaml
+  - ocpai-operator.yaml
+  
+  # Wave 20: Health check gate (validates all operators are ready)
+  - operators-health-check-job.yaml
+  
+  # Wave 30: First instance (NFD)
+  - nfd-instance.yaml
+  
+  # Wave 35: NVIDIA cluster policy (depends on NFD instance)
+  - nvidia-cluster-policy-application.yaml
+  
+  # Wave 36: LWS instance
+  - lws-instance.yaml
+  
+  # Wave 38: Instances health check gate (validates NFD, NVIDIA, LWS instances)
+  - instances-health-check-job.yaml
+  
+  # Wave 42: OpenShift AI instance (after instances health check)
+  - ocpai-dcs-instance.yaml
+  
+  # Wave 50: Infrastructure
+  # - machine-set-app.yaml # Commented out as part of the default installation
+  
+  # Wave 55: GPU models
   - gpu-models-app.yaml
-  # keycloak-app.yaml is intentionally excluded
+  
+  
+  # ═══════════════════════════════════════════
+  # APPLICATIONS (Deploy Last - Wave 80+)
+  # ═══════════════════════════════════════════
+  
+   # Wave 80: Users and RBAC
+  - users-app.yaml
+ 
+  # Wave 82: MAAS tier configuration
   - maas-tier-config-app.yaml
-  - machine-set-app.yaml
-  - oauth-app.yaml
-  - public-models-app.yaml
-#  - nfd-operator-application.yaml
-#  - nfd-instance.yaml
-#  - nvidia-operator-application.yaml
-#  - nvidia-cluster-policy-application.yaml
-#  - ocpai-operator.yaml
-#  - ocpai-dcs-instance.yaml
+  
+  # Wave 85: Model deployment applications
+  - model-deployments-app.yaml
+
+  # Wave 90: Application services
+  # - keycloak-app.yaml   # Commented out as part of the default installation

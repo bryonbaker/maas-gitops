@@ -6,8 +6,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: platform
   annotations:
-    # Ensure this deploys after any future "cluster-basics" bundles if you add them.
-    argocd.argoproj.io/sync-wave: "10"
+    # Wave 18: OpenShift AI operator (LAST - depends on kueue, nvidia, lws)
+    argocd.argoproj.io/sync-wave: "18"
 spec:
   project: default
   source:

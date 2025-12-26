@@ -6,16 +6,16 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   labels:
-    app.kubernetes.io/part-of: platform
+    app.kubernetes.io/part-of: apps
   annotations:
-    # Ensure this deploys after any future "cluster-basics" bundles if you add them.
-    argocd.argoproj.io/sync-wave: "30"
+    # Wave 80: Users and RBAC (applications deploy last)
+    argocd.argoproj.io/sync-wave: "80"
 spec:
   project: default
   source:
     repoURL: 'https://github.com/bryonbaker/maas-experiments'
     targetRevision: main
-    path: components/platform/users/base
+    path: components/apps/users/base
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:
