@@ -272,7 +272,7 @@ Rapidly spin up complete MaaS environments for testing and experimentation.
 
 3. **Deploy models**:
    ```bash
-   kubectl apply -k components/platform/model-deployments/base
+   kubectl apply -k components/apps/model-deployments/base
    ```
 
 4. **Test inference**:
@@ -313,7 +313,7 @@ Rapidly spin up complete MaaS environments for testing and experimentation.
 
 ### Model Deployment
 
-1. Create new LLMInferenceService YAML in `components/platform/model-deployments/base/`
+1. Create new LLMInferenceService YAML in `components/apps/model-deployments/base/`
 2. Add tier annotation: `alpha.maas.opendatahub.io/tiers`
 3. Update kustomization.yaml
 4. Commit and sync
