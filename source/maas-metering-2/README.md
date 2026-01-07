@@ -239,50 +239,6 @@ curl -k https://maas.apps.your-domain.com/llm/model-name/v1/completions \
 
 ---
 
-## Comparison with v1
-
-| Aspect | v1 (maas-metering) | v2 (maas-metering-2) |
-|--------|-------------------|---------------------|
-| **Lines of code** | ~180 | ~60 (67% less) |
-| **Responsibility** | Path filtering + credit check | Credit check only |
-| **Path logic** | In Go service | Not needed (route precedence) |
-| **Headers passed** | 3 (path, user, method) | 3 (for logging only) |
-| **Test complexity** | High (many path scenarios) | Low (2 credit scenarios) |
-| **Maintainability** | Complex | Simple |
-| **Performance** | Extra path parsing | No overhead |
-
----
-
-## Key Insights
-
-### Why Path Filtering Was Removed
-
-**Discovery:** Route-level AuthPolicies take precedence over gateway-level policies in Kuadrant.
-
-**Impact:**
-- `/v1/models` requests → Handled by `maas-api-route` + `maas-api-auth-policy`
-- `/maas-api/*` requests → Handled by `maas-api-route` + `maas-api-auth-policy`
-- Inference requests → Handled by gateway-level policy
-
-**Result:** Gateway-level policy **only sees inference requests**, so path filtering in Go is redundant.
-
-### Single Responsibility Principle
-
-The Go service now has one job: **check if the user has credits**.
-
-- ✅ No routing decisions
-- ✅ No path parsing
-- ✅ No request type classification
-- ✅ Pure credit check logic
-
-This makes it:
-- Easier to test
-- Easier to maintain
-- Easier to extend (Phase 2+)
-- Faster (no overhead)
-
----
-
 ## Troubleshooting
 
 ### Service not called for inference requests
@@ -315,23 +271,5 @@ kubectl get authpolicy gateway-auth-policy -n openshift-ingress -o jsonpath='{.s
 
 Look for `Enforced: True`.
 
----
 
-## License
-
-Apache License 2.0
-
-## Author
-
-Bryon Baker
-
----
-
-## Next Steps
-
-1. **Deploy v2** alongside v1 for comparison
-2. **Run integration tests** to verify behavior
-3. **Monitor logs** to confirm only inference requests hit the service
-4. **Plan Phase 2** implementation (actual credit lookup)
-5. **Deprecate v1** once v2 is proven stable
 
