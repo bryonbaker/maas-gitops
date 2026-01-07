@@ -1,8 +1,9 @@
-[[allowlist]]
+[[allowlists]]
   description = "Allow specific secret files as they are not secrets that matter."
 
   paths = [
-    "components/platform/users/files/users.htpasswd",
-    "components/platform/users/base/htpass-secret.yaml",
-    "components/apps/keycloak/base/admin-secret.yaml"
+    "components/apps/users/files/users.htpasswd",
+    "components/apps/users/base/htpass-secret.yaml",
+    "components/apps/keycloak/base/admin-secret.yaml",
+    "components/platform/oauth/yaml/oauth-secret.yaml"
   ]
