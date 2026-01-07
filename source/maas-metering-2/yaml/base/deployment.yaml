@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maas-metering-2
+  namespace: maas-metering-2
+  labels:
+    app: maas-metering-2
+    app.kubernetes.io/name: maas-metering-2
+    app.kubernetes.io/component: metering
+    app.kubernetes.io/part-of: models-as-a-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: maas-metering-2
+  template:
+    metadata:
+      labels:
+        app: maas-metering-2
+    spec:
+      serviceAccountName: maas-metering-2-sa
+      containers:
+      - name: maas-metering
+        image: quay.io/bryonbaker/maas-metering-2:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: ALLOW_VALUE
+          value: "true"  # Phase 1: Hardcoded to allow. Change to "false" to test deny.
+        - name: PORT
+          value: "8080"
+        args:
+        - "--port=8080"
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+

@@ -1,0 +1,50 @@
+# Build stage - Use Fedora minimal
+FROM registry.fedoraproject.org/fedora-minimal:latest AS builder
+
+# Install build dependencies
+RUN microdnf install -y wget tar gzip git make ca-certificates && \
+    microdnf clean all
+
+# Install golang
+# Note: Using Go 1.24.10 to match project standards
+RUN wget -q https://go.dev/dl/go1.24.10.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && \
+    tar -C /usr/local -xzf go1.24.10.linux-amd64.tar.gz && \
+    rm go1.24.10.linux-amd64.tar.gz
+
+# Add Go to PATH
+ENV PATH="/usr/local/go/bin:${PATH}"
+
+WORKDIR /build
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the application
+# CGO_ENABLED=0 creates a static binary, -ldflags="-s -w" strips debug info to reduce size
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o maas-metering cmd/server/main.go
+
+# Runtime stage - Use Fedora minimal
+FROM registry.fedoraproject.org/fedora-minimal:latest
+
+# Keep runtime small but functional (TLS + timezones are commonly useful)
+RUN microdnf -y update \
+ && microdnf -y install ca-certificates tzdata \
+ && microdnf clean all
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /build/maas-metering .
+
+# Note: No USER directive needed - OpenShift/Kubernetes will handle running as non-root
+# via SecurityContext. The application doesn't need to write to the filesystem for Phase 1.
+
+EXPOSE 8080
+
+ENTRYPOINT ["./maas-metering"]
+

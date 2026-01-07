@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: maas-metering-2
+  namespace: maas-metering-2
+  labels:
+    app: maas-metering-2
+    app.kubernetes.io/name: maas-metering-2
+    app.kubernetes.io/component: metering
+    app.kubernetes.io/part-of: models-as-a-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: maas-metering-2
+

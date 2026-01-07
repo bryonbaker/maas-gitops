@@ -1,0 +1,158 @@
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: gateway-auth-policy
+  namespace: openshift-ingress
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: maas-default-gateway
+
+  rules:
+    # ======================================================
+    # AUTHENTICATION (unchanged)
+    # ======================================================
+    authentication:
+      service-accounts:
+        kubernetesTokenReview:
+          audiences:
+            - maas-default-gateway-sa
+        cache:
+          key:
+            selector: context.request.http.headers.authorization.@case:lower
+          ttl: 600
+        defaults:
+          userid:
+            expression: |
+              auth.identity.user.username.split(":")[3]
+        metrics: false
+        priority: 0
+
+    # ======================================================
+    # METADATA (tier lookup + NEW credit allow)
+    # ======================================================
+    metadata:
+      # Existing: Tier lookup based on user groups
+      matchedTier:
+        http:
+          url: "http://maas-api.maas-api.svc.cluster.local:8080/v1/tiers/lookup"
+          method: POST
+          contentType: application/json
+          body:
+            expression: '{ "groups": auth.identity.user.groups }'
+        cache:
+          key:
+            selector: auth.identity.user.username
+          ttl: 300
+        metrics: false
+        priority: 0
+
+      # Credit check for inference requests
+      # Note: This policy only processes inference requests because:
+      # - Route-level policies handle non-inference paths (/v1/models, /maas-api/*, etc.)
+      # - Route-level policies take precedence over gateway-level policies
+      # - Only inference requests (/{namespace}/{model}/v1/*) reach this policy
+      credit-allow:
+        http:
+          url: "http://maas-metering-2.maas-metering-2.svc.cluster.local:8080/allow"
+          method: GET
+          headers:
+            Accept:
+              value: "application/json"
+            # Pass original request path to service for filtering
+            X-Original-Path:
+              selector: context.request.http.path
+            # Pass username for logging and future credit checks
+            X-Username:
+              selector: auth.identity.user.username
+            # Pass HTTP method for logging
+            X-Method:
+              selector: context.request.http.method
+        cache:
+          key:
+            selector: auth.identity.user.username
+          ttl: 60  # Cache responses per user for 60 seconds
+        metrics: false
+        priority: 0
+
+    # ======================================================
+    # AUTHORIZATION (tier access + NEW credit access)
+    # ======================================================
+    authorization:
+      # Existing: Kubernetes RBAC check for model access
+      # Only applies to inference paths (/{namespace}/{model}/...)
+      tier-access:
+        kubernetesSubjectAccessReview:
+          user:
+            expression: auth.identity.user.username
+          authorizationGroups:
+            expression: auth.identity.user.groups
+          resourceAttributes:
+            group:
+              value: serving.kserve.io
+            resource:
+              value: llminferenceservices
+            verb:
+              value: post
+            namespace:
+              expression: |
+                request.path.split("/")[1]
+            name:
+              expression: |
+                request.path.split("/")[2]
+        cache:
+          key:
+            selector: '{auth.identity.user.username}:{request.path}'
+          ttl: 60
+        metrics: false
+        priority: 0
+
+      # NEW: Credit check authorization (simple passthrough)
+      # The Go service does ALL filtering logic (inference vs non-inference)
+      # OPA just checks if the service returned allow=true
+      credit-access:
+        opa:
+          rego: |
+            # Simple passthrough - Go service does all the work
+            # Service returns:
+            #   - {"allow": true} for non-inference (always)
+            #   - {"allow": true/false} for inference (based on credit check)
+            #   - {"allow": false} for unknown paths (fail-closed)
+            allow {
+              input.auth.metadata["credit-allow"].allow == true
+            }
+        metrics: false
+        priority: 1
+
+    # ======================================================
+    # RESPONSE (success + NEW unauthorized)
+    # ======================================================
+    response:
+      success:
+        filters:
+          identity:
+            json:
+              properties:
+                tier:
+                  expression: auth.metadata.matchedTier["tier"]
+                userid:
+                  expression: auth.identity.userid
+            metrics: false
+            priority: 0
+      
+      # NEW: Custom error message when credit check denies
+      unauthorized:
+        body:
+          value: |
+            {
+              "error": "access_denied",
+              "message": "Access denied: You do not have sufficient credits or permissions to perform this inference request.",
+              "code": 403
+            }
+        headers:
+          Content-Type:
+            value: "application/json"
+          X-Reason:
+            value: "Authorization failed"
+        metrics: false
