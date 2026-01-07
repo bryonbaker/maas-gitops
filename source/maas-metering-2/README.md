@@ -7,18 +7,6 @@
 
 The MaaS Metering Service v2 is a **pure credit-checking service** for the Model-as-a-Service (MaaS) platform. (This version simplifies the v1 architecture by removing path filtering logic from the Go application and relying on Kuadrant's route-level policy precedence.)
 
-### Key Simplification
-
-**v1 Architecture (maas-metering):**
-- Go service performed path filtering (inference vs non-inference)
-- Complex logic with `isInferencePath()`, `isNonInferencePath()`, etc.
-- ~180 lines of code
-
-**v2 Architecture (maas-metering-2):**
-- Go service is a **pure credit check** (single responsibility)
-- Route-level AuthPolicies filter non-inference paths
-- ~60 lines of code (67% reduction)
-
 ---
 
 ## Architecture
