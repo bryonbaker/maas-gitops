@@ -295,3 +295,187 @@ spec:
             input.auth.metadata["credit-allow"].allow == true
           }
 ```
+
+---
+
+## End-to-End Architecture with External Metering
+
+The complete production architecture integrates the credit-checking service with external metering and billing systems:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          AI Service Provider Environment                 │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  User → Gateway → AuthPolicy → Credit Check Service                      │
+│                                      ↓                                    │
+│                              ┌───────────────┐                           │
+│                              │ Pre-Request:  │                           │
+│                              │ Check Budget  │←─────────────┐            │
+│                              └───────────────┘              │            │
+│                                      ↓                       │            │
+│                              Allow/Deny Decision             │            │
+│                                      ↓                       │            │
+│  Model Inference (if allowed)                               │            │
+│         ↓                                                    │            │
+│  ┌──────────────────────┐                                   │            │
+│  │ Consumption Metrics   │                                   │            │
+│  │ - User ID             │                                   │            │
+│  │ - Model name          │                                   │            │
+│  │ - Tokens used         │                                   │            │
+│  │ - Timestamp           │                                   │            │
+│  │ - Cost                │                                   │            │
+│  └──────────────────────┘                                   │            │
+│         ↓                                                    │            │
+│  ┌──────────────────────────────────────────┐               │            │
+│  │ Metrics Export (Prometheus/OpenTelemetry)│               │            │
+│  └──────────────────────────────────────────┘               │            │
+│         ↓                                                    │            │
+└─────────│────────────────────────────────────────────────────┼────────────┘
+          │                                                    │
+          │ Scrape Interval (e.g., every 30s)                 │
+          ↓                                                    │
+┌─────────────────────────────────────────────────────────────┼────────────┐
+│                    External Metering System                  │            │
+│                    (e.g., openmeter.io)                      │            │
+├─────────────────────────────────────────────────────────────┼────────────┤
+│                                                              │            │
+│  ┌──────────────────────┐                                   │            │
+│  │ Metrics Collector     │                                   │            │
+│  │ - Scrapes MaaS        │                                   │            │
+│  │ - Aggregates usage    │                                   │            │
+│  │ - Calculates costs    │                                   │            │
+│  └──────────────────────┘                                   │            │
+│         ↓                                                    │            │
+│  ┌──────────────────────┐                                   │            │
+│  │ Usage Database        │                                   │            │
+│  │ Per-customer tracking │                                   │            │
+│  └──────────────────────┘                                   │            │
+│         ↓                                                    │            │
+│  ┌──────────────────────┐        Real-time Budget Check ────┘            │
+│  │ Budget Manager        │                                                │
+│  │ - Track spending      │                                                │
+│  │ - Enforce limits      │                                                │
+│  │ - Alert on thresholds │                                                │
+│  └──────────────────────┘                                                │
+│         ↓                                                                 │
+│  ┌──────────────────────┐                                                │
+│  │ Billing System        │                                                │
+│  │ - Invoice generation  │                                                │
+│  │ - Payment processing  │                                                │
+│  └──────────────────────┘                                                │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+### Data Flow
+
+**1. Pre-Request: Budget Check**
+```
+User Request → Credit Check Service
+                     ↓
+              Query Budget API (openmeter.io)
+              GET /customers/{id}/balance
+                     ↓
+              Check: balance > 0?
+                     ↓
+              Return: allow=true/false
+```
+
+**2. Inference Processing**
+```
+If allowed → Model processes request
+                     ↓
+              Response generated (N tokens)
+                     ↓
+              Metrics recorded:
+              - customer_id: "acme-corp"
+              - model: "llama-3-70b"
+              - tokens: 1247
+              - cost: $0.0249
+              - timestamp: 2026-01-08T15:23:45Z
+```
+
+**3. Metrics Scraping**
+```
+External System (every 30s) → Scrape Prometheus endpoint
+                                      ↓
+                               /metrics endpoint:
+                               maas_inference_tokens_total{customer="acme-corp",model="llama-3-70b"} 1247
+                               maas_inference_cost_dollars{customer="acme-corp",model="llama-3-70b"} 0.0249
+```
+
+**4. Budget Tracking**
+```
+Metering System → Aggregate usage
+                       ↓
+                  Update customer balance:
+                  balance -= $0.0249
+                       ↓
+                  Check thresholds:
+                  - 80% budget used? → Alert
+                  - 100% budget used? → Soft limit warning
+                  - 110% budget used? → Hard limit, block requests
+```
+
+**5. Billing Cycle**
+```
+End of Month → Generate invoice
+                    ↓
+               Total: All usage for customer
+                    ↓
+               Send invoice / Process payment
+                    ↓
+               Reset budget for next cycle
+```
+
+### Key Integration Points
+
+**MaaS Exports (Required)**:
+- Prometheus metrics endpoint with customer, model, token, and cost dimensions
+- Structured logs with usage metadata (JSON format)
+- Optional: OpenTelemetry traces for detailed request tracking
+
+**External System Provides (Required)**:
+- REST API for real-time budget queries: `GET /customers/{id}/balance`
+- Webhook for budget alerts: `POST /webhooks/budget-alert`
+- Dashboard for usage visualization and reporting
+
+**Configuration Data (Synchronized)**:
+- Customer-to-budget mappings
+- Model pricing (cost per 1K tokens)
+- Budget limits and alert thresholds
+- Billing cycle definitions
+
+### Example Metrics Format
+
+```prometheus
+# Prometheus metrics exposed by MaaS
+maas_inference_requests_total{customer="acme-corp",model="llama-3-70b",status="success"} 847
+maas_inference_requests_total{customer="acme-corp",model="llama-3-70b",status="denied"} 12
+maas_inference_tokens_total{customer="acme-corp",model="llama-3-70b",type="input"} 45234
+maas_inference_tokens_total{customer="acme-corp",model="llama-3-70b",type="output"} 18956
+maas_inference_cost_dollars{customer="acme-corp",model="llama-3-70b"} 127.89
+maas_inference_duration_seconds{customer="acme-corp",model="llama-3-70b",quantile="0.99"} 2.45
+```
+
+### Implementation Phases
+
+**Phase 1 (Current POC)**: 
+- Credit check service with boolean allow/deny
+- Basic logging of requests
+
+**Phase 2**: 
+- Export Prometheus metrics with customer and model labels
+- Integrate with external budget API for real-time checks
+- Implement fail-open/fail-closed configuration
+
+**Phase 3**: 
+- Token counting and cost calculation per request
+- Webhook notifications for budget thresholds
+- Multi-tier pricing support
+
+**Phase 4**: 
+- Real-time budget synchronization
+- Predictive budget alerts (trend-based)
+- Chargeback reporting and invoice generation integration
