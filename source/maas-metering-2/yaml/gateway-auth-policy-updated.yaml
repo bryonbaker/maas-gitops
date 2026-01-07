@@ -141,7 +141,8 @@ spec:
             metrics: false
             priority: 0
       
-      # NEW: Custom error message when credit check denies
+      # NEW: Custom error message when credit check denies. 
+      # Note that this error is a catch all for all access-denied errors. Unfortunately you cannot have different error messages for different reasons.
       unauthorized:
         body:
           value: |
