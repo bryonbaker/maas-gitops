@@ -368,6 +368,48 @@ The complete production architecture integrates the credit-checking service with
 └───────────────────────────────────────────────────────────────────────────┘
 ```
 
+### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant G as Gateway (Authorino)
+    participant M as MaaS Metering (Go Service)
+    participant LLM as Model Serving
+
+    Note over U, G: Route Precedence Logic
+    opt Non-Inference Path (e.g. /maas-api)
+        U->>G: Request API/OAuth
+        G-->>U: Allow (Bypass Credit Check)
+    end
+
+    Note over U, LLM: Inference Path (/{namespace}/{model}/v1/*)
+    U->>G: Inference Request
+    
+    activate G
+    Note right of G: Metadata Fetch Phase [cite: 21]
+    G->>M: GET /allow (Headers: User, Path)
+    
+    activate M
+    Note right of M: Pure Credit Check [cite: 54]
+    M->>M: Check Allow Boolean (MVP)
+    M-->>G: JSON { "allow": true/false }
+    deactivate M
+    
+    alt Allowed
+        G->>LLM: Forward Inference Request
+        activate LLM
+        LLM-->>G: Model Response
+        deactivate LLM
+        G-->>U: Return Response
+    else Denied
+        G-->>U: 403 Forbidden (Insufficient Credits)
+    end
+    deactivate G
+```
+
+
 ### Data Flow
 
 **1. Pre-Request: Budget Check**
