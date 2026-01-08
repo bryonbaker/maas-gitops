@@ -96,6 +96,49 @@ Request → Route Precedence
         Pure credit check (no path logic)
 ```
 
+### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant G as Gateway (Authorino)
+    participant M as MaaS Metering (Go Service)
+    participant LLM as Model Serving
+
+    Note over U, G: Route Precedence Logic
+    opt Non-Inference Path (e.g. /maas-api)
+        U->>G: Request API/OAuth
+        G-->>U: Allow (Bypass Credit Check)
+    end
+
+    Note over U, LLM: Inference Path (/{namespace}/{model}/v1/*)
+    U->>G: Inference Request
+    
+    activate G
+    Note right of G: Metadata Fetch Phase
+    G->>M: GET /allow (Headers: User, Path)
+    
+    activate M
+    Note right of M: Pure Credit Check
+    M->>M: Check Allow Boolean (MVP)
+    M-->>G: JSON { "allow": true/false }
+    deactivate M
+
+    Note right of G: OPA Authorization Phase
+    
+    alt Credit Allowed
+        G->>LLM: Forward Request
+        activate LLM
+        LLM-->>G: Model Response
+        deactivate LLM
+        G-->>U: 200 OK (Response)
+    else Credit Denied
+        G-->>U: 403 Forbidden
+    end
+    deactivate G
+```
+
 ### Benefits
 - **67% code reduction** (180 → 60 lines)
 - **Single responsibility**: Only does credit checking
@@ -302,112 +345,119 @@ spec:
 
 The complete production architecture integrates the credit-checking service with external metering and billing systems:
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          AI Service Provider Environment                 │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                           │
-│  User → Gateway → AuthPolicy → Credit Check Service                      │
-│                                      ↓                                    │
-│                              ┌───────────────┐                           │
-│                              │ Pre-Request:  │                           │
-│                              │ Check Budget  │←─────────────┐            │
-│                              └───────────────┘              │            │
-│                                      ↓                       │            │
-│                              Allow/Deny Decision             │            │
-│                                      ↓                       │            │
-│  Model Inference (if allowed)                               │            │
-│         ↓                                                    │            │
-│  ┌──────────────────────┐                                   │            │
-│  │ Consumption Metrics   │                                   │            │
-│  │ - User ID             │                                   │            │
-│  │ - Model name          │                                   │            │
-│  │ - Tokens used         │                                   │            │
-│  │ - Timestamp           │                                   │            │
-│  │ - Cost                │                                   │            │
-│  └──────────────────────┘                                   │            │
-│         ↓                                                    │            │
-│  ┌──────────────────────────────────────────┐               │            │
-│  │ Metrics Export (Prometheus/OpenTelemetry)│               │            │
-│  └──────────────────────────────────────────┘               │            │
-│         ↓                                                    │            │
-└─────────│────────────────────────────────────────────────────┼────────────┘
-          │                                                    │
-          │ Scrape Interval (e.g., every 30s)                 │
-          ↓                                                    │
-┌─────────────────────────────────────────────────────────────┼────────────┐
-│                    External Metering System                  │            │
-│                    (e.g., openmeter.io)                      │            │
-├─────────────────────────────────────────────────────────────┼────────────┤
-│                                                              │            │
-│  ┌──────────────────────┐                                   │            │
-│  │ Metrics Collector     │                                   │            │
-│  │ - Scrapes MaaS        │                                   │            │
-│  │ - Aggregates usage    │                                   │            │
-│  │ - Calculates costs    │                                   │            │
-│  └──────────────────────┘                                   │            │
-│         ↓                                                    │            │
-│  ┌──────────────────────┐                                   │            │
-│  │ Usage Database        │                                   │            │
-│  │ Per-customer tracking │                                   │            │
-│  └──────────────────────┘                                   │            │
-│         ↓                                                    │            │
-│  ┌──────────────────────┐        Real-time Budget Check ────┘            │
-│  │ Budget Manager        │                                                │
-│  │ - Track spending      │                                                │
-│  │ - Enforce limits      │                                                │
-│  │ - Alert on thresholds │                                                │
-│  └──────────────────────┘                                                │
-│         ↓                                                                 │
-│  ┌──────────────────────┐                                                │
-│  │ Billing System        │                                                │
-│  │ - Invoice generation  │                                                │
-│  │ - Payment processing  │                                                │
-│  └──────────────────────┘                                                │
-│                                                                           │
-└───────────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph MaaS ["Model as a Service (MaaS)"]
+        A["User ➔ Gateway ➔ AuthPolicy ➔ CreditCheckService"] --> B["Per-Request Check Budget"]
+        
+        B -- "Allow/Deny Decision" --> C["Model Inference (if allowed)"]
+        
+        C --> D["Consumption Metrics
+        - User ID
+        - Model name
+        - Tokens used
+        - Timestamp"]
+        
+        D --> E["Metrics export: (Prometheus/OpenTelemetry)"]
+    end
+
+    subgraph ExternalMetering ["External Metering System (e.g., OpenMeter.io)"]
+        F["Metrics Collector
+        - Scrape MaaS
+        - Aggregate usage
+        - Calculate costs"]
+        
+        G[(Usage database)]
+        
+        H["Budget Manager
+        - Track spending
+        - Enforce limits
+        - Alert on thresholds"]
+        
+        I["Billing System
+        - Invoice generation
+        - Payment processing"]
+        
+        F --> G
+        G <--> H
+        H --> I
+    end
+
+    %% External Connections
+    E -- "Scrape Interval (e.g. every 30 seconds)" --> F
+    H -- "Real-time budget check" --> B
+
+    %% Styling Subgraphs
+    style MaaS fill:#fff2cc,stroke:#d6b656,color:#000
+    style ExternalMetering fill:#fff2cc,stroke:#d6b656,color:#000
+
+    %% Styling Nodes (White background, black text)
+    classDef whiteNode fill:#fff,stroke:#333,color:#000
+    class A,B,C,D,E,F,G,H,I whiteNode
 ```
 
-### Sequence Diagram
+
+
+
+
+### Future Production IMplementation
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant U as User
-    participant G as Gateway (Authorino)
-    participant M as MaaS Metering (Go Service)
+    participant G as Gateway/AuthPolicy
+    participant CS as Credit Check Service
     participant LLM as Model Serving
+    participant P as Prometheus (Metrics)
+    participant EM as External Metering (OpenMeter)
+    participant B as Billing System
 
-    Note over U, G: Route Precedence Logic
-    opt Non-Inference Path (e.g. /maas-api)
-        U->>G: Request API/OAuth
-        G-->>U: Allow (Bypass Credit Check)
-    end
-
-    Note over U, LLM: Inference Path (/{namespace}/{model}/v1/*)
+    %% Phase 1: Pre-Request Check
+    Note over U, CS: 1. Pre-Request: Budget Check [cite: 189]
     U->>G: Inference Request
+    G->>CS: Check Credit
+    activate CS
+    CS->>EM: GET /customers/{id}/balance
+    EM-->>CS: Balance > 0
+    CS-->>G: Allow Request
+    deactivate CS
+
+    %% Phase 2: Inference & Metrics
+    Note over G, P: 2. Inference & Metrics Recording [cite: 198, 204]
+    G->>LLM: Process Request
+    activate LLM
+    LLM-->>G: Response (N Tokens)
+    deactivate LLM
+    G->>U: Response
     
-    activate G
-    Note right of G: Metadata Fetch Phase [cite: 21]
-    G->>M: GET /allow (Headers: User, Path)
-    
-    activate M
-    Note right of M: Pure Credit Check [cite: 54]
-    M->>M: Check Allow Boolean (MVP)
-    M-->>G: JSON { "allow": true/false }
-    deactivate M
-    
-    alt Allowed
-        G->>LLM: Forward Inference Request
-        activate LLM
-        LLM-->>G: Model Response
-        deactivate LLM
-        G-->>U: Return Response
-    else Denied
-        G-->>U: 403 Forbidden (Insufficient Credits)
+    par Async Metrics Export
+        LLM->>P: Record Metric (tokens, cost, model)
     end
-    deactivate G
+
+    %% Phase 3: Scraping & Billing
+    Note over P, B: 3. Scraping & Reconciliation Loop [cite: 211, 221]
+    loop Every 30 Seconds
+        EM->>P: Scrape /metrics endpoint
+        P-->>EM: Returns maas_inference_tokens_total
+        
+        activate EM
+        EM->>EM: Aggregate Usage & Calculate Costs
+        EM->>EM: Update Customer Budget
+        
+        alt Threshold Reached (e.g. 100%)
+            EM->>B: Trigger Alert / Block
+        end
+        deactivate EM
+    end
+
+    %% Phase 4: Monthly Billing
+    Note over EM, B: 4. Billing Cycle [cite: 226]
+    B->>EM: Query Total Usage
+    EM-->>B: Usage Data
+    B->>U: Generate Invoice
 ```
+
 
 
 ### Data Flow
